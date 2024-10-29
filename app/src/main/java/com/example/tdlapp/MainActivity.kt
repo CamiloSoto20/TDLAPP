@@ -1,5 +1,6 @@
 package com.example.tdlapp
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
@@ -18,18 +19,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Verifica si el usuario está autenticado
-        val db = DatabaseHelper(this).readableDatabase
-        val cursor = db.rawQuery("SELECT * FROM ${DatabaseHelper.TABLE_USERS}", null)
-        if (cursor.count == 0) {
-            startActivity(Intent(this, LoginActivity::class.java))
-            cursor.close()
-            finish() // Cierra la actividad actual si el usuario no está autenticado
-            return
-        }
-        cursor.close()
-
         setContentView(R.layout.lista_activity)
         dbHelper = DatabaseHelper(this)
         todoListView = findViewById(R.id.todoListView)
@@ -38,10 +27,18 @@ class MainActivity : AppCompatActivity() {
         todoListView.adapter = taskListAdapter
 
         addTaskButton.setOnClickListener {
-            startActivity(Intent(this, AddTaskActivity::class.java))
+            val intent = Intent(this, AddTaskActivity::class.java)
+            startActivityForResult(intent, 1) // Inicia la actividad esperando un resultado
         }
 
         loadTasks()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 1 && resultCode == Activity.RESULT_OK) {
+            loadTasks() // Recarga las tareas después de agregar una nueva
+        }
     }
 
     private fun loadTasks() {

@@ -1,5 +1,6 @@
 package com.example.tdlapp
 
+import android.app.Activity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
@@ -39,8 +40,11 @@ class AddTaskActivity : AppCompatActivity() {
             db.execSQL("INSERT INTO ${DatabaseHelper.TABLE_TASKS} (${DatabaseHelper.COLUMN_TASK_NAME}, ${DatabaseHelper.COLUMN_TASK_DESCRIPTION}, ${DatabaseHelper.COLUMN_TASK_DUE_DATE}, ${DatabaseHelper.COLUMN_TASK_COMPLETED}) VALUES (?, ?, ?, ?)", arrayOf(name, description, dueDate, 0))
             db.close()
             Toast.makeText(this, "Task added", Toast.LENGTH_SHORT).show()
-            finish()
+
+            setResult(Activity.RESULT_OK) // Envía un resultado de éxito
+            finish() // Cierra la actividad
         }
     }
 }
+
 
