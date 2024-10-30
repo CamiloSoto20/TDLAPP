@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.tdlapp.data.DatabaseHelper
+import com.example.tdlapp.ui.theme.TDLAppTheme
 
 class AddTaskActivity : ComponentActivity() {
     private lateinit var dbHelper: DatabaseHelper
@@ -20,10 +22,13 @@ class AddTaskActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         dbHelper = DatabaseHelper(this)
         setContent {
-            AddTaskScreen(dbHelper)
+            TDLAppTheme {
+                AddTaskScreen(dbHelper)
+            }
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun AddTaskScreen(dbHelper: DatabaseHelper) {
         var name by remember { mutableStateOf("") }
@@ -32,44 +37,64 @@ class AddTaskActivity : ComponentActivity() {
         val context = LocalContext.current
 
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Task Name") }
+                label = { Text("Nombre Tarea") },
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedLabelColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onBackground
+                )
             )
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Task Description") }
+                label = { Text("Descrpicion") },
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedLabelColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onBackground
+                )
             )
             OutlinedTextField(
                 value = dueDate,
                 onValueChange = { dueDate = it },
-                label = { Text("Task Due Date") }
+                label = { Text("Fecha de Entrega") },
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedLabelColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onBackground
+                )
             )
-            Button(onClick = {
-                if (name.isNotEmpty() && description.isNotEmpty() && dueDate.isNotEmpty()) {
-                    val db = dbHelper.writableDatabase
-                    db.execSQL(
-                        "INSERT INTO ${DatabaseHelper.TABLE_TASKS} (${DatabaseHelper.COLUMN_TASK_NAME}, ${DatabaseHelper.COLUMN_TASK_DESCRIPTION}, ${DatabaseHelper.COLUMN_TASK_DUE_DATE}, ${DatabaseHelper.COLUMN_TASK_COMPLETED}) VALUES (?, ?, ?, ?)",
-                        arrayOf(name, description, dueDate, 0)
-                    )
-                    db.close()
-                    Toast.makeText(context, "Task added", Toast.LENGTH_SHORT).show()
-                    (context as Activity).setResult(Activity.RESULT_OK)
-                    context.finish()
-                } else {
-                    Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
-                }
-            }) {
-                Text("Save Task")
+            Button(
+                onClick = {
+                    if (name.isNotEmpty() && description.isNotEmpty() && dueDate.isNotEmpty()) {
+                        val db = dbHelper.writableDatabase
+                        db.execSQL(
+                            "INSERT INTO ${DatabaseHelper.TABLE_TASKS} (${DatabaseHelper.COLUMN_TASK_NAME}, ${DatabaseHelper.COLUMN_TASK_DESCRIPTION}, ${DatabaseHelper.COLUMN_TASK_DUE_DATE}, ${DatabaseHelper.COLUMN_TASK_COMPLETED}) VALUES (?, ?, ?, ?)",
+                            arrayOf(name, description, dueDate, 0)
+                        )
+                        db.close()
+                        Toast.makeText(context, "Tarea Agregada", Toast.LENGTH_SHORT).show()
+                        (context as Activity).setResult(Activity.RESULT_OK)
+                        context.finish()
+                    } else {
+                        Toast.makeText(context, "Rellena Los Cuadros", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Text("Guardar Tarea", color = Color.White)
             }
         }
     }
 }
+
 
 
 
