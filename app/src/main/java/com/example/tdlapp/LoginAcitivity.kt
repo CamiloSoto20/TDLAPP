@@ -2,50 +2,76 @@ package com.example.tdlapp
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
 import com.example.tdlapp.data.DatabaseHelper
 
-class LoginActivity : AppCompatActivity() {
-
-    private lateinit var email: EditText
-    private lateinit var password: EditText
-    private lateinit var loginButton: Button
-    private lateinit var registerButton: Button
+class LoginActivity : ComponentActivity() {
     private lateinit var dbHelper: DatabaseHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.login_activity)
-
         dbHelper = DatabaseHelper(this)
-        email = findViewById(R.id.email)
-        password = findViewById(R.id.password)
-        loginButton = findViewById(R.id.loginButton)
-        registerButton = findViewById(R.id.registerButton)
-
-        loginButton.setOnClickListener {
-            val emailText = email.text.toString()
-            val passwordText = password.text.toString()
-            val db = dbHelper.readableDatabase
-            val cursor = db.rawQuery("SELECT * FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_USER_EMAIL}=? AND ${DatabaseHelper.COLUMN_USER_PASSWORD}=?", arrayOf(emailText, passwordText))
-            if (cursor.moveToFirst()) {
-                startActivity(Intent(this, MainActivity::class.java))
-                cursor.close()
-                finish() // Cierra la actividad de login después del inicio de sesión exitoso
-            } else {
-                cursor.close()
-                Toast.makeText(this, "Authentication failed.", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        registerButton.setOnClickListener {
-            startActivity(Intent(this, RegisterActivity::class.java))
+        setContent {
+            LoginScreen(dbHelper)
         }
     }
 }
+
+@Composable
+fun LoginScreen(dbHelper: DatabaseHelper) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") }
+        )
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            visualTransformation = PasswordVisualTransformation()
+        )
+        Button(onClick = {
+            val db = dbHelper.readableDatabase
+            val cursor = db.rawQuery(
+                "SELECT * FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_USER_EMAIL}=? AND ${DatabaseHelper.COLUMN_USER_PASSWORD}=?",
+                arrayOf(email, password)
+            )
+            if (cursor.moveToFirst()) {
+                context.startActivity(Intent(context, MainActivity::class.java))
+                cursor.close()
+                (context as ComponentActivity).finish()
+            } else {
+                cursor.close()
+                Toast.makeText(context, "Authentication failed.", Toast.LENGTH_SHORT).show()
+            }
+        }) {
+            Text("Login")
+        }
+        Button(onClick = {
+            context.startActivity(Intent(context, RegisterActivity::class.java))
+        }) {
+            Text("Register")
+        }
+    }
+}
+
 
 
 

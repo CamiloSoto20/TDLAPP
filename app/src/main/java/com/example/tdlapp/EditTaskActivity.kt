@@ -3,55 +3,87 @@ package com.example.tdlapp
 
 
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.example.tdlapp.data.DatabaseHelper
 
-class EditTaskActivity : AppCompatActivity() {
-
-    private lateinit var taskName: EditText
-    private lateinit var taskDescription: EditText
-    private lateinit var taskDueDate: EditText
-    private lateinit var saveEditTaskButton: Button
+class EditTaskActivity : ComponentActivity() {
     private lateinit var dbHelper: DatabaseHelper
     private var taskId: Int? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.edtitask_activity)
-
         dbHelper = DatabaseHelper(this)
-
         taskId = intent.getIntExtra("TASK_ID", -1)
-        val taskNameStr = intent.getStringExtra("TASK_NAME")
-        val taskDescriptionStr = intent.getStringExtra("TASK_DESCRIPTION")
-        val taskDueDateStr = intent.getStringExtra("TASK_DUE_DATE")
+        val taskNameStr = intent.getStringExtra("TASK_NAME") ?: ""
+        val taskDescriptionStr = intent.getStringExtra("TASK_DESCRIPTION") ?: ""
+        val taskDueDateStr = intent.getStringExtra("TASK_DUE_DATE") ?: ""
 
-        taskName = findViewById(R.id.editTaskName)
-        taskDescription = findViewById(R.id.editTaskDescription)
-        taskDueDate = findViewById(R.id.editTaskDueDate)
-        saveEditTaskButton = findViewById(R.id.saveEditTaskButton)
+        setContent {
+            EditTaskScreen(
+                dbHelper = dbHelper,
+                taskId = taskId,
+                taskNameStr = taskNameStr,
+                taskDescriptionStr = taskDescriptionStr,
+                taskDueDateStr = taskDueDateStr
+            )
+        }
+    }
+}
 
-        taskName.setText(taskNameStr)
-        taskDescription.setText(taskDescriptionStr)
-        taskDueDate.setText(taskDueDateStr)
+@Composable
+fun EditTaskScreen(
+    dbHelper: DatabaseHelper,
+    taskId: Int?,
+    taskNameStr: String,
+    taskDescriptionStr: String,
+    taskDueDateStr: String
+) {
+    var name by remember { mutableStateOf(taskNameStr) }
+    var description by remember { mutableStateOf(taskDescriptionStr) }
+    var dueDate by remember { mutableStateOf(taskDueDateStr) }
+    val context = LocalContext.current
 
-        saveEditTaskButton.setOnClickListener {
-            val name = taskName.text.toString().trim()
-            val description = taskDescription.text.toString().trim()
-            val dueDate = taskDueDate.text.toString().trim()
-
-            if (name.isEmpty() || description.isEmpty() || dueDate.isEmpty()) {
-                Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Task Name") }
+        )
+        OutlinedTextField(
+            value = description,
+            onValueChange = { description = it },
+            label = { Text("Task Description") }
+        )
+        OutlinedTextField(
+            value = dueDate,
+            onValueChange = { dueDate = it },
+            label = { Text("Task Due Date") }
+        )
+        Button(onClick = {
+            if (name.isNotEmpty() && description.isNotEmpty() && dueDate.isNotEmpty()) {
+                val db = dbHelper.writableDatabase
+                db.execSQL(
+                    "UPDATE ${DatabaseHelper.TABLE_TASKS} SET ${DatabaseHelper.COLUMN_TASK_NAME} = ?, ${DatabaseHelper.COLUMN_TASK_DESCRIPTION} = ?, ${DatabaseHelper.COLUMN_TASK_DUE_DATE} = ? WHERE ${DatabaseHelper.COLUMN_TASK_ID} = ?",
+                    arrayOf(name, description, dueDate, taskId.toString())
+                )
+                db.close()
+                Toast.makeText(context, "Task updated", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
             }
-
-            val db = dbHelper.writableDatabase
-            db.execSQL("UPDATE ${DatabaseHelper.TABLE_TASKS} SET ${DatabaseHelper.COLUMN_TASK_NAME} = ?, ${DatabaseHelper.COLUMN_TASK_DESCRIPTION} = ?, ${DatabaseHelper.COLUMN_TASK_DUE_DATE} = ? WHERE ${DatabaseHelper.COLUMN_TASK_ID} = ?", arrayOf(name, description, dueDate, taskId.toString()))
-            Toast.makeText(this, "Task updated", Toast.LENGTH_SHORT).show()
-            finish()
+        }) {
+            Text("Save Task")
         }
     }
 }

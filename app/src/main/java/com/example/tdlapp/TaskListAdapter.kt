@@ -1,75 +1,99 @@
 package com.example.tdlapp
 
 
-import android.content.Context
-import android.content.Intent
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.BaseAdapter
-import android.widget.CheckBox
-import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
-import com.example.tdlapp.data.DatabaseHelper
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.example.tdlapp.data.Task
 
-class TaskListAdapter(private val context: Context, private val taskList: MutableList<Task>) : BaseAdapter() {
-
-    override fun getCount(): Int {
-        return taskList.size
-    }
-
-    override fun getItem(position: Int): Any {
-        return taskList[position]
-    }
-
-    override fun getItemId(position: Int): Long {
-        return position.toLong()
-    }
-
-    override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-        val view: View = convertView ?: LayoutInflater.from(context).inflate(R.layout.item_task, parent, false)
-
-        val task = taskList[position]
-        val taskName: TextView = view.findViewById(R.id.taskName)
-        val taskDescription: TextView = view.findViewById(R.id.taskDescription)
-        val taskDueDate: TextView = view.findViewById(R.id.taskDueDate)
-        val taskCompleted: CheckBox = view.findViewById(R.id.taskCompleted)
-
-        taskName.text = task.name
-        taskDescription.text = task.description
-        taskDueDate.text = task.dueDate
-        taskCompleted.isChecked = task.completed
-
-        view.setOnClickListener {
-            // Código para editar la tarea
-            val editIntent = Intent(context, EditTaskActivity::class.java)
-            editIntent.putExtra("TASK_ID", task.id)
-            editIntent.putExtra("TASK_NAME", task.name)
-            editIntent.putExtra("TASK_DESCRIPTION", task.description)
-            editIntent.putExtra("TASK_DUE_DATE", task.dueDate)
-            context.startActivity(editIntent)
+@Composable
+fun TaskListScreen(
+    taskList: List<Task>,
+    onEditTask: (Task) -> Unit,
+    onDeleteTask: (Task) -> Unit,
+    onAddTask: () -> Unit
+) {
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Button(onClick = onAddTask) {
+            Text("Add Task")
         }
-
-        view.setOnLongClickListener {
-            // Código para eliminar la tarea
-            val builder = AlertDialog.Builder(context)
-            builder.setTitle("Delete Task")
-            builder.setMessage("Are you sure you want to delete this task?")
-            builder.setPositiveButton("Yes") { _, _ ->
-                val dbHelper = DatabaseHelper(context)
-                val db = dbHelper.writableDatabase
-                db.delete(DatabaseHelper.TABLE_TASKS, "${DatabaseHelper.COLUMN_TASK_ID}=?", arrayOf(task.id.toString()))
-                taskList.removeAt(position)
-                notifyDataSetChanged()
+        LazyColumn {
+            items(taskList) { task ->
+                TaskItem(task, onEditTask, onDeleteTask)
             }
-            builder.setNegativeButton("No") { dialog, _ ->
-                dialog.dismiss()
-            }
-            builder.show()
-            true
         }
+    }
+}
 
-        return view
+@Composable
+fun TaskItem(
+    task: Task,
+    onEditTask: (Task) -> Unit,
+    onDeleteTask: (Task) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onEditTask(task) }
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(text = task.name, style = MaterialTheme.typography.bodyLarge)
+        Text(text = task.description, style = MaterialTheme.typography.bodyMedium)
+        Text(text = task.dueDate, style = MaterialTheme.typography.bodySmall)
+        Row {
+            Text(text = "Completed: ")
+            Checkbox(
+                checked = task.completed,
+                onCheckedChange = null
+            )
+        }
+        TextButton(onClick = { showDialog = true }) {
+            Text("Delete")
+        }
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = { showDialog = false },
+                title = { Text("Delete Task") },
+                text = { Text("Are you sure you want to delete this task?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        onDeleteTask(task)
+                        showDialog = false
+                    }) {
+                        Text("Yes")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDialog = false }) {
+                        Text("No")
+                    }
+                }
+            )
+        }
     }
 }
