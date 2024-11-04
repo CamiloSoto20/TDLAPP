@@ -14,7 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.tdlapp.data.DatabaseHelper
-import com.example.tdlapp.ui.theme.TDLAppTheme
+import com.example.tdlapp.ui.theme.AppTheme
 
 class RegisterActivity : ComponentActivity() {
     private lateinit var dbHelper: DatabaseHelper
@@ -23,7 +23,7 @@ class RegisterActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         dbHelper = DatabaseHelper(this)
         setContent {
-            TDLAppTheme {
+            AppTheme {
                 RegisterScreen(dbHelper)
             }
         }

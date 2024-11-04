@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.tdlapp.data.DatabaseHelper
-import com.example.tdlapp.ui.theme.TDLAppTheme
+import com.example.tdlapp.ui.theme.AppTheme
 
 class AddTaskActivity : ComponentActivity() {
     private lateinit var dbHelper: DatabaseHelper
@@ -22,7 +22,7 @@ class AddTaskActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         dbHelper = DatabaseHelper(this)
         setContent {
-            TDLAppTheme {
+            AppTheme {
                 AddTaskScreen(dbHelper)
             }
         }

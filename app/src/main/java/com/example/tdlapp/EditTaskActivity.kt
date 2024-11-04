@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.tdlapp.data.DatabaseHelper
-import com.example.tdlapp.ui.theme.TDLAppTheme
+import com.example.tdlapp.ui.theme.AppTheme
 
 class EditTaskActivity : ComponentActivity() {
     private lateinit var dbHelper: DatabaseHelper
@@ -29,7 +29,7 @@ class EditTaskActivity : ComponentActivity() {
         val taskDueDateStr = intent.getStringExtra("TASK_DUE_DATE") ?: ""
 
         setContent {
-            TDLAppTheme {
+            AppTheme {
                 EditTaskScreen(
                     dbHelper = dbHelper,
                     taskId = taskId,

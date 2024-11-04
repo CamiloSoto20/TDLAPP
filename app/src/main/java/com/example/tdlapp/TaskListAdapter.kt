@@ -53,15 +53,20 @@ fun TaskItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.surface)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .clickable { onEditTask(task) }
-                .background(MaterialTheme.colorScheme.background)
+                .background(MaterialTheme.colorScheme.surface)
         ) {
-            Text(text = task.name, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
+            Text(
+                text = task.name,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
             Checkbox(
                 checked = task.completed,
                 onCheckedChange = { isChecked ->
@@ -73,33 +78,42 @@ fun TaskItem(
                 )
             )
         }
-        Text(text = task.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
-        Text(text = task.dueDate, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground)
+        Text(
+            text = task.description,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = task.dueDate,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
         TextButton(onClick = { showDialog = true }) {
-            Text("Eliminar", color = Color.Red)
+            Text("Eliminar", color = MaterialTheme.colorScheme.error)
         }
         if (showDialog) {
             AlertDialog(
                 onDismissRequest = { showDialog = false },
-                title = { Text("Eliminar Tarea", color = MaterialTheme.colorScheme.onBackground) },
-                text = { Text("Estas seguro de Eliminar la tarea?", color = MaterialTheme.colorScheme.onBackground) },
+                title = { Text("Eliminar Tarea", color = MaterialTheme.colorScheme.onSurface) },
+                text = { Text("Estas seguro de Eliminar la tarea?", color = MaterialTheme.colorScheme.onSurface) },
                 confirmButton = {
                     TextButton(onClick = {
                         onDeleteTask(task)
                         showDialog = false
                     }) {
-                        Text("Si", color = MaterialTheme.colorScheme.onSurface) // Texto en negro
+                        Text("Si", color = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDialog = false }) {
-                        Text("No", color = MaterialTheme.colorScheme.onSurface) // Texto en negro
+                        Text("No", color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             )
         }
     }
 }
+
 
 
 

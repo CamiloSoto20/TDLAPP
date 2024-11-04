@@ -1,24 +1,39 @@
 package com.example.tdlapp
 
-import android.app.Activity
 import android.content.ContentValues
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.tdlapp.data.DatabaseHelper
 import com.example.tdlapp.data.Task
-import com.example.tdlapp.ui.theme.TDLAppTheme
+import com.example.tdlapp.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var dbHelper: DatabaseHelper
@@ -27,32 +42,47 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         dbHelper = DatabaseHelper(this)
         setContent {
-            TDLAppTheme {
+            AppTheme {
                 MainScreen()
             }
+        }
+    }
+    @Composable
+    fun AccountDialog(openDialog: Boolean, onDismiss: () -> Unit) {
+        if (openDialog) {
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text("Datos de la cuenta") },
+                text = {
+                    Column {
+                        Text("Nombre: Usuario")
+                        Text("Correo: usuario@example.com")
+                        // Añade más datos si es necesario
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cerrar")
+                    }
+                }
+            )
         }
     }
 
     @Composable
     fun MainScreen() {
         val taskList = remember { mutableStateListOf<Task>() }
+        val context = LocalContext.current // Asegúrate de tener el contexto aquí
+        val openDialog = remember { mutableStateOf(false) }
+
         LaunchedEffect(Unit) {
             loadTasks(taskList)
         }
-        val addTaskLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                loadTasks(taskList)
-            }
-        }
-        val editTaskLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                loadTasks(taskList)
-            }
-        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background) // Ajuste de fondo
+                .background(MaterialTheme.colorScheme.background)
         ) {
             Column(
                 modifier = Modifier
@@ -60,21 +90,29 @@ class MainActivity : ComponentActivity() {
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    "TDLAPP",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onBackground // Color de texto del tema
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "TDLAPP",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    IconButton(onClick = {
+                        openDialog.value = true
+                    }) {
+                        Icon(Icons.Default.AccountCircle, contentDescription = "Cuenta")
+                    }
+                }
+                AccountDialog(openDialog = openDialog.value, onDismiss = { openDialog.value = false })
                 TaskListScreen(
                     taskList = taskList,
                     onEditTask = { task ->
-                        val editIntent = Intent(this@MainActivity, EditTaskActivity::class.java).apply {
+                        val editIntent = Intent(context, EditTaskActivity::class.java).apply {
                             putExtra("TASK_ID", task.id)
                             putExtra("TASK_NAME", task.name)
                             putExtra("TASK_DESCRIPTION", task.description)
                             putExtra("TASK_DUE_DATE", task.dueDate)
                         }
-                        editTaskLauncher.launch(editIntent)
+                        context.startActivity(editIntent) // Usa el contexto de esta manera
                     },
                     onDeleteTask = { task ->
                         dbHelper.writableDatabase.delete(
@@ -85,8 +123,8 @@ class MainActivity : ComponentActivity() {
                         taskList.remove(task)
                     },
                     onAddTask = {
-                        val addIntent = Intent(this@MainActivity, AddTaskActivity::class.java)
-                        addTaskLauncher.launch(addIntent)
+                        val addIntent = Intent(context, AddTaskActivity::class.java)
+                        context.startActivity(addIntent) // Usa el contexto de esta manera
                     },
                     onToggleCompleted = { task, isCompleted ->
                         task.completed = isCompleted
@@ -110,18 +148,21 @@ class MainActivity : ComponentActivity() {
             ) {
                 Button(
                     onClick = {
-                        val addIntent = Intent(this@MainActivity, AddTaskActivity::class.java)
-                        addTaskLauncher.launch(addIntent)
+                        val addIntent = Intent(context, AddTaskActivity::class.java)
+                        context.startActivity(addIntent) // Usa el contexto de esta manera
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary // Color del botón
+                        containerColor = MaterialTheme.colorScheme.secondary
                     )
                 ) {
-                    Text("Añadir Tarea", color = Color.White) // Texto blanco
+                    Text("Agregar Tarea", color = Color.White)
                 }
             }
         }
     }
+
+
+
 
     private fun loadTasks(taskList: MutableList<Task>) {
         taskList.clear()
