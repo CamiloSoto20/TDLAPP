@@ -1,5 +1,6 @@
 package com.example.tdlapp
 
+import android.app.Activity
 import android.content.ContentValues
 import android.content.Intent
 import android.os.Bundle
@@ -9,7 +10,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -47,17 +50,21 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
     @Composable
-    fun AccountDialog(openDialog: Boolean, onDismiss: () -> Unit) {
+    fun AccountDialog(openDialog: Boolean, onDismiss: () -> Unit, userName: String, userEmail: String, onLogout: () -> Unit) {
         if (openDialog) {
             AlertDialog(
                 onDismissRequest = onDismiss,
                 title = { Text("Datos de la cuenta") },
                 text = {
                     Column {
-                        Text("Nombre: Usuario")
-                        Text("Correo: usuario@example.com")
-                        // Añade más datos si es necesario
+                        Text("Nombre: $userName")
+                        Text("Correo: $userEmail")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onLogout) {
+                            Text("Cerrar sesión")
+                        }
                     }
                 },
                 confirmButton = {
@@ -72,8 +79,14 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun MainScreen() {
         val taskList = remember { mutableStateListOf<Task>() }
-        val context = LocalContext.current // Asegúrate de tener el contexto aquí
+        val context = LocalContext.current
         val openDialog = remember { mutableStateOf(false) }
+
+        // Supongamos que tienes el ID del usuario que ha iniciado sesión
+        val userId = 1 // Reemplaza esto con la lógica para obtener el ID del usuario actual
+        val user = dbHelper.getUserData(userId)
+        val userName = user?.username ?: "Nombre no disponible"
+        val userEmail = user?.email ?: "Correo no disponible"
 
         LaunchedEffect(Unit) {
             loadTasks(taskList)
@@ -102,7 +115,18 @@ class MainActivity : ComponentActivity() {
                         Icon(Icons.Default.AccountCircle, contentDescription = "Cuenta")
                     }
                 }
-                AccountDialog(openDialog = openDialog.value, onDismiss = { openDialog.value = false })
+                AccountDialog(
+                    openDialog = openDialog.value,
+                    onDismiss = { openDialog.value = false },
+                    userName = userName,
+                    userEmail = userEmail,
+                    onLogout = {
+                        openDialog.value = false
+                        val loginIntent = Intent(context, LoginActivity::class.java)
+                        context.startActivity(loginIntent)
+                        finish()
+                    }
+                )
                 TaskListScreen(
                     taskList = taskList,
                     onEditTask = { task ->
@@ -111,8 +135,9 @@ class MainActivity : ComponentActivity() {
                             putExtra("TASK_NAME", task.name)
                             putExtra("TASK_DESCRIPTION", task.description)
                             putExtra("TASK_DUE_DATE", task.dueDate)
+                            putExtra("TASK_DUE_TIME", task.dueTime)
                         }
-                        context.startActivity(editIntent) // Usa el contexto de esta manera
+                        startActivityForResult(editIntent, REQUEST_EDIT_TASK)
                     },
                     onDeleteTask = { task ->
                         dbHelper.writableDatabase.delete(
@@ -124,7 +149,7 @@ class MainActivity : ComponentActivity() {
                     },
                     onAddTask = {
                         val addIntent = Intent(context, AddTaskActivity::class.java)
-                        context.startActivity(addIntent) // Usa el contexto de esta manera
+                        startActivityForResult(addIntent, REQUEST_ADD_TASK)
                     },
                     onToggleCompleted = { task, isCompleted ->
                         task.completed = isCompleted
@@ -149,7 +174,7 @@ class MainActivity : ComponentActivity() {
                 Button(
                     onClick = {
                         val addIntent = Intent(context, AddTaskActivity::class.java)
-                        context.startActivity(addIntent) // Usa el contexto de esta manera
+                        startActivityForResult(addIntent, REQUEST_ADD_TASK)
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.secondary
@@ -161,25 +186,48 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
-
-
     private fun loadTasks(taskList: MutableList<Task>) {
         taskList.clear()
         val db = dbHelper.readableDatabase
         val cursor = db.query(DatabaseHelper.TABLE_TASKS, null, null, null, null, null, null)
+
         while (cursor.moveToNext()) {
             val id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TASK_ID))
             val name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TASK_NAME))
             val description = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TASK_DESCRIPTION))
             val dueDate = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TASK_DUE_DATE))
+            val dueTime = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TASK_DUE_TIME))
             val completed = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TASK_COMPLETED)) > 0
-            val task = Task(id, name, description, dueDate, completed)
+
+            val task = Task(id, name, description, dueDate, dueTime, completed)
             taskList.add(task)
         }
         cursor.close()
     }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == Activity.RESULT_OK) {
+            when (requestCode) {
+                REQUEST_ADD_TASK, REQUEST_EDIT_TASK -> {
+                    val taskList = mutableStateListOf<Task>()
+                    loadTasks(taskList)
+                    setContent {
+                        AppTheme {
+                            MainScreen()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    companion object {
+        private const val REQUEST_ADD_TASK = 1
+        private const val REQUEST_EDIT_TASK = 2
+    }
 }
+
 
 
 

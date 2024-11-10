@@ -5,5 +5,7 @@ data class Task(
     val name: String,
     val description: String,
     val dueDate: String,
+    val dueTime: String, // Nuevo campo para la hora de entrega
     var completed: Boolean
 )
+

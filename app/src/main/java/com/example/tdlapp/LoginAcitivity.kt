@@ -38,6 +38,9 @@ fun LoginScreen(dbHelper: DatabaseHelper) {
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
 
+    // Validación de correo
+    val isEmailValid = email.contains("@")
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -52,55 +55,65 @@ fun LoginScreen(dbHelper: DatabaseHelper) {
             value = email,
             onValueChange = { email = it },
             label = { Text("Correo") },
+            modifier = Modifier.fillMaxWidth(), // Cuadro de texto al ancho completo
             colors = TextFieldDefaults.outlinedTextFieldColors(
                 focusedLabelColor = MaterialTheme.colorScheme.onSurface,
                 unfocusedLabelColor = MaterialTheme.colorScheme.onSurface
-            )
+            ),
+            isError = !isEmailValid && email.isNotEmpty() // Mostrar error si el correo es inválido
         )
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Contraseña") },
             visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(), // Cuadro de texto al ancho completo
             colors = TextFieldDefaults.outlinedTextFieldColors(
                 focusedLabelColor = MaterialTheme.colorScheme.onSurface,
                 unfocusedLabelColor = MaterialTheme.colorScheme.onSurface
             )
         )
+        Spacer(modifier = Modifier.height(16.dp))
+
         Button(
             onClick = {
-                val db = dbHelper.readableDatabase
-                val cursor = db.rawQuery(
-                    "SELECT * FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_USER_EMAIL}=? AND ${DatabaseHelper.COLUMN_USER_PASSWORD}=?",
-                    arrayOf(email, password)
-                )
-                if (cursor.moveToFirst()) {
-                    context.startActivity(Intent(context, MainActivity::class.java))
-                    cursor.close()
-                    (context as ComponentActivity).finish()
+                if (isEmailValid) {
+                    val db = dbHelper.readableDatabase
+                    val cursor = db.rawQuery(
+                        "SELECT * FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_USER_EMAIL}=? AND ${DatabaseHelper.COLUMN_USER_PASSWORD}=?",
+                        arrayOf(email, password)
+                    )
+                    if (cursor.moveToFirst()) {
+                        context.startActivity(Intent(context, MainActivity::class.java))
+                        cursor.close()
+                        (context as ComponentActivity).finish()
+                    } else {
+                        cursor.close()
+                        Toast.makeText(context, "Acceso Fallido.", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
-                    cursor.close()
-                    Toast.makeText(context, "Acceso Fallido.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Correo no válido.", Toast.LENGTH_SHORT).show()
                 }
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.secondary
-            )
+            ),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Iniciar Sesion", color = Color.White)
+            Text("Iniciar Sesión", color = Color.White)
         }
-        Button(
+        Spacer(modifier = Modifier.height(8.dp))
+
+        TextButton(
             onClick = {
                 context.startActivity(Intent(context, RegisterActivity::class.java))
-            },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary
-            )
+            }
         ) {
-            Text("Registro", color = Color.White)
+            Text("¿No tienes una cuenta? Regístrate", color = MaterialTheme.colorScheme.primary)
         }
     }
 }
+
 
 
 

@@ -83,8 +83,9 @@ fun TaskItem(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
+        // Agregar la fecha y la hora
         Text(
-            text = task.dueDate,
+            text = "Fecha De Entega: ${task.dueDate} - Hora: ${task.dueTime}", // Muestra la fecha y la hora
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -95,13 +96,13 @@ fun TaskItem(
             AlertDialog(
                 onDismissRequest = { showDialog = false },
                 title = { Text("Eliminar Tarea", color = MaterialTheme.colorScheme.onSurface) },
-                text = { Text("Estas seguro de Eliminar la tarea?", color = MaterialTheme.colorScheme.onSurface) },
+                text = { Text("¿Estás seguro de que quieres eliminar la tarea?", color = MaterialTheme.colorScheme.onSurface) },
                 confirmButton = {
                     TextButton(onClick = {
                         onDeleteTask(task)
                         showDialog = false
                     }) {
-                        Text("Si", color = MaterialTheme.colorScheme.onSurface)
+                        Text("Sí", color = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 dismissButton = {
@@ -113,7 +114,6 @@ fun TaskItem(
         }
     }
 }
-
 
 
 
