@@ -1,6 +1,5 @@
-package com.example.tdlapp
+package com.example.tdlapp.tareas
 
-import android.app.Activity
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
@@ -33,7 +32,7 @@ class AddTaskActivity : ComponentActivity() {
         setContent {
             AppTheme {
                 AddTaskScreen(dbHelper) { resultIntent ->
-                    setResult(Activity.RESULT_OK, resultIntent)
+                    setResult(RESULT_OK, resultIntent)
                     finish()
                 }
             }

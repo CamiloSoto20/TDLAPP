@@ -34,8 +34,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.tdlapp.Login.LoginActivity
 import com.example.tdlapp.data.DatabaseHelper
 import com.example.tdlapp.data.Task
+import com.example.tdlapp.tareas.AddTaskActivity
+import com.example.tdlapp.tareas.EditTaskActivity
 import com.example.tdlapp.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {

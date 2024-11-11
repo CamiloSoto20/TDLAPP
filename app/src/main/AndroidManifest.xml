@@ -18,7 +18,7 @@
         tools:targetApi="31">
 
         <activity
-            android:name=".LoginActivity"
+            android:name=".Login.LoginActivity"
             android:exported="true"
             android:theme="@style/Theme.Todolist">
             <intent-filter>
@@ -28,7 +28,7 @@
         </activity>
 
         <activity
-            android:name=".RegisterActivity"
+            android:name=".Login.RegisterActivity"
             android:exported="true"
             android:theme="@style/Theme.Todolist" />
 
@@ -38,12 +38,12 @@
             android:theme="@style/Theme.Todolist" />
 
         <activity
-            android:name=".AddTaskActivity"
+            android:name=".tareas.AddTaskActivity"
             android:exported="true"
             android:theme="@style/Theme.Todolist" />
 
         <activity
-            android:name=".EditTaskActivity"
+            android:name=".tareas.EditTaskActivity"
             android:exported="true"
             android:theme="@style/Theme.Todolist" />
     </application>
