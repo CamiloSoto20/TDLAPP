@@ -1,7 +1,5 @@
 package com.example.tdlapp.tareas
 
-
-
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent

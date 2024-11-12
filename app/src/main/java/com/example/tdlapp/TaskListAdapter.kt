@@ -1,10 +1,12 @@
 package com.example.tdlapp
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,7 +42,6 @@ fun TaskListScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskItem(
     task: Task,
@@ -52,8 +53,10 @@ fun TaskItem(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(8.dp)
+            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)) // Añadir borde con esquinas redondeadas
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp)) // Fondo con forma redondeada
             .padding(16.dp)
-            .background(MaterialTheme.colorScheme.surface)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -83,9 +86,8 @@ fun TaskItem(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
-        // Agregar la fecha y la hora
         Text(
-            text = "Fecha De Entega: ${task.dueDate} - Hora: ${task.dueTime}", // Muestra la fecha y la hora
+            text = "Fecha De Entega: ${task.dueDate} - Hora: ${task.dueTime}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface
         )

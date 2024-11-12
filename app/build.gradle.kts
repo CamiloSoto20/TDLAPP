@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.tdlapp"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.tdlapp"
@@ -47,6 +47,7 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    buildToolsVersion = "34.0.0"
 }
 
 dependencies {

@@ -1,6 +1,7 @@
 package com.example.tdlapp.Login
 
 import android.content.Intent
+import android.graphics.Shader
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -13,8 +14,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -66,7 +70,9 @@ fun LoginScreen(dbHelper: DatabaseHelper) {
             painter = painterResource(id = R.drawable.c64f4b9b3abddf6894923b219410cc84), // Reemplaza con tu imagen
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(10.dp) // Aplica el efecto de desenfoque
         )
 
         Column(
@@ -86,23 +92,33 @@ fun LoginScreen(dbHelper: DatabaseHelper) {
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Correo") },
+                label = { Text("Correo", color = Color.White) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedLabelColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = Color.Transparent,
+                    focusedBorderColor = Color.White,
+                    unfocusedBorderColor = Color.Gray,
+                    focusedLabelColor = Color.White,
+                    unfocusedLabelColor = Color.Gray,
+                    cursorColor = Color.White
                 ),
                 isError = !isEmailValid && email.isNotEmpty()
             )
+            Spacer(modifier = Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Contraseña") },
+                label = { Text("Contraseña", color = Color.White) },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedLabelColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = Color.Transparent,
+                    focusedBorderColor = Color.White,
+                    unfocusedBorderColor = Color.Gray,
+                    focusedLabelColor = Color.White,
+                    unfocusedLabelColor = Color.Gray,
+                    cursorColor = Color.White
                 )
             )
             Spacer(modifier = Modifier.height(16.dp))
