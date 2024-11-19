@@ -47,49 +47,23 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         dbHelper = DatabaseHelper(this)
+
+        // Recupera los datos del Intent
+        val userName = intent.getStringExtra("USER_NAME") ?: "Nombre no disponible"
+        val userEmail = intent.getStringExtra("USER_EMAIL") ?: "Correo no disponible"
+
         setContent {
             AppTheme {
-                MainScreen()
+                MainScreen(userName, userEmail)
             }
         }
     }
 
     @Composable
-    fun AccountDialog(openDialog: Boolean, onDismiss: () -> Unit, userName: String, userEmail: String, onLogout: () -> Unit) {
-        if (openDialog) {
-            AlertDialog(
-                onDismissRequest = onDismiss,
-                title = { Text("Datos de la cuenta") },
-                text = {
-                    Column {
-                        Text("Nombre: $userName")
-                        Text("Correo: $userEmail")
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = onLogout) {
-                            Text("Cerrar sesión")
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cerrar")
-                    }
-                }
-            )
-        }
-    }
-
-    @Composable
-    fun MainScreen() {
+    fun MainScreen(userName: String, userEmail: String) {
         val taskList = remember { mutableStateListOf<Task>() }
         val context = LocalContext.current
         val openDialog = remember { mutableStateOf(false) }
-
-        // Supongamos que tienes el ID del usuario que ha iniciado sesión
-        val userId = 1 // Reemplaza esto con la lógica para obtener el ID del usuario actual
-        val user = dbHelper.getUserData(userId)
-        val userName = user?.username ?: "Nombre no disponible"
-        val userEmail = user?.email ?: "Correo no disponible"
 
         LaunchedEffect(Unit) {
             loadTasks(taskList)
@@ -112,12 +86,12 @@ class MainActivity : ComponentActivity() {
                         style = MaterialTheme.typography.headlineLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
-                    IconButton(onClick = {
-                        openDialog.value = true
-                    }) {
+                    IconButton(onClick = { openDialog.value = true }) {
                         Icon(Icons.Default.AccountCircle, contentDescription = "Cuenta")
                     }
                 }
+
+                // Cuadro de diálogo para mostrar los datos de la cuenta
                 AccountDialog(
                     openDialog = openDialog.value,
                     onDismiss = { openDialog.value = false },
@@ -130,6 +104,7 @@ class MainActivity : ComponentActivity() {
                         finish()
                     }
                 )
+
                 TaskListScreen(
                     taskList = taskList,
                     onEditTask = { task ->
@@ -168,6 +143,7 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -186,6 +162,37 @@ class MainActivity : ComponentActivity() {
                     Text("Agregar Tarea", color = Color.White)
                 }
             }
+        }
+    }
+
+    @Composable
+    fun AccountDialog(
+        openDialog: Boolean,
+        onDismiss: () -> Unit,
+        userName: String,
+        userEmail: String,
+        onLogout: () -> Unit
+    ) {
+        if (openDialog) {
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text("Datos de la cuenta") },
+                text = {
+                    Column {
+                        Text("Nombre: $userName")
+                        Text("Correo: $userEmail")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onLogout) {
+                            Text("Cerrar sesión")
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cerrar")
+                    }
+                }
+            )
         }
     }
 
@@ -217,7 +224,7 @@ class MainActivity : ComponentActivity() {
                     loadTasks(taskList)
                     setContent {
                         AppTheme {
-                            MainScreen()
+                            MainScreen(userName = "", userEmail = "") // Ajustar en función de tu lógica
                         }
                     }
                 }

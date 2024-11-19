@@ -1,15 +1,14 @@
 package com.example.tdlapp.Login
 
 import android.content.Intent
-import android.graphics.Shader
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,11 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RenderEffect
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +33,7 @@ class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         dbHelper = DatabaseHelper(this)
+
         setContent {
             AppTheme {
                 LoginScreen(dbHelper)
@@ -52,7 +50,7 @@ fun LoginScreen(dbHelper: DatabaseHelper) {
     val context = LocalContext.current
 
     // Validación de correo
-    val isEmailValid = email.contains("@")
+    val isEmailValid = email.contains("@") && email.isNotEmpty()
 
     Box(
         modifier = Modifier
@@ -69,10 +67,9 @@ fun LoginScreen(dbHelper: DatabaseHelper) {
         Image(
             painter = painterResource(id = R.drawable.c64f4b9b3abddf6894923b219410cc84), // Reemplaza con tu imagen
             contentDescription = null,
-            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
-                .blur(10.dp) // Aplica el efecto de desenfoque
+                .blur(10.dp)
         )
 
         Column(
@@ -85,41 +82,28 @@ fun LoginScreen(dbHelper: DatabaseHelper) {
             Text(
                 "TDLAPP",
                 style = MaterialTheme.typography.headlineLarge.copy(fontSize = 48.sp),
-                color = if (isSystemInDarkTheme()) Color.White else Color.Black
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Correo", color = Color.White) },
+                label = { Text("Correo electrónico") },
                 modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    containerColor = Color.Transparent,
-                    focusedBorderColor = Color.White,
-                    unfocusedBorderColor = Color.Gray,
-                    focusedLabelColor = Color.White,
-                    unfocusedLabelColor = Color.Gray,
-                    cursorColor = Color.White
-                ),
-                isError = !isEmailValid && email.isNotEmpty()
+                isError = !isEmailValid && email.isNotEmpty(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                colors = TextFieldDefaults.outlinedTextFieldColors()
             )
             Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Contraseña", color = Color.White) },
+                label = { Text("Contraseña") },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    containerColor = Color.Transparent,
-                    focusedBorderColor = Color.White,
-                    unfocusedBorderColor = Color.Gray,
-                    focusedLabelColor = Color.White,
-                    unfocusedLabelColor = Color.Gray,
-                    cursorColor = Color.White
-                )
+                colors = TextFieldDefaults.outlinedTextFieldColors()
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -127,28 +111,37 @@ fun LoginScreen(dbHelper: DatabaseHelper) {
                 onClick = {
                     if (isEmailValid) {
                         val db = dbHelper.readableDatabase
-                        val cursor = db.rawQuery(
-                            "SELECT * FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_USER_EMAIL}=? AND ${DatabaseHelper.COLUMN_USER_PASSWORD}=?",
-                            arrayOf(email, password)
-                        )
-                        if (cursor.moveToFirst()) {
-                            context.startActivity(Intent(context, MainActivity::class.java))
-                            cursor.close()
-                            (context as ComponentActivity).finish()
-                        } else {
-                            cursor.close()
-                            Toast.makeText(context, "Acceso Fallido.", Toast.LENGTH_SHORT).show()
+                        try {
+                            val cursor = db.rawQuery(
+                                "SELECT * FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_USER_EMAIL}=? AND ${DatabaseHelper.COLUMN_USER_PASSWORD}=?",
+                                arrayOf(email, password)
+                            )
+                            if (cursor != null && cursor.moveToFirst()) {
+                                val userName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_USERNAME))
+                                val userEmail = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_EMAIL))
+                                cursor.close()
+
+                                val mainIntent = Intent(context, MainActivity::class.java).apply {
+                                    putExtra("USER_NAME", userName)
+                                    putExtra("USER_EMAIL", userEmail)
+                                }
+                                context.startActivity(mainIntent)
+                                (context as ComponentActivity).finish()
+                            } else {
+                                cursor?.close()
+                                Toast.makeText(context, "Credenciales inválidas", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Error al consultar la base de datos", Toast.LENGTH_SHORT).show()
+                            e.printStackTrace()
                         }
                     } else {
-                        Toast.makeText(context, "Correo no válido.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Correo no válido", Toast.LENGTH_SHORT).show()
                     }
                 },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary
-                ),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Iniciar Sesión", color = Color.White)
+                Text("Iniciar Sesión")
             }
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -157,14 +150,10 @@ fun LoginScreen(dbHelper: DatabaseHelper) {
                     context.startActivity(Intent(context, RegisterActivity::class.java))
                 }
             ) {
-                Text("¿No tienes una cuenta? Regístrate", color = MaterialTheme.colorScheme.primary)
+                Text("¿No tienes cuenta? Regístrate")
             }
         }
     }
 }
-
-
-
-
 
 
