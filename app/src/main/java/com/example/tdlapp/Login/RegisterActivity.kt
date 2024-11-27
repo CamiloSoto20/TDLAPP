@@ -1,19 +1,36 @@
 package com.example.tdlapp.Login
 
-
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.tdlapp.MainActivity
 import com.example.tdlapp.data.DatabaseHelper
 import com.example.tdlapp.ui.theme.AppTheme
 
@@ -22,10 +39,16 @@ class RegisterActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Inicializa el helper de base de datos
         dbHelper = DatabaseHelper(this)
+
+        // Obtén el correo enviado desde la actividad previa
+        val googleEmail = intent.getStringExtra("GOOGLE_EMAIL") ?: ""
+        val fromGoogleSignIn = intent.getBooleanExtra("FROM_GOOGLE_SIGN_IN", false)
         setContent {
             AppTheme {
-                RegisterScreen(dbHelper)
+                RegisterScreen(dbHelper, googleEmail, fromGoogleSignIn)
             }
         }
     }
@@ -33,9 +56,10 @@ class RegisterActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterScreen(dbHelper: DatabaseHelper) {
+fun RegisterScreen(dbHelper: DatabaseHelper, googleEmail: String, fromGoogleSignIn: Boolean) {
+    // Variables de estado para los campos del formulario
     var username by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf(googleEmail) } // Prellenar con el correo recibido
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     val context = LocalContext.current
@@ -51,31 +75,45 @@ fun RegisterScreen(dbHelper: DatabaseHelper) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Título
+        Text(
+            text = "Registro de Usuario",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 24.dp),
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        // Campo: Nombre de usuario
         OutlinedTextField(
             value = username,
             onValueChange = { username = it },
             label = { Text("Nombre de usuario") },
             modifier = Modifier.fillMaxWidth(),
             colors = TextFieldDefaults.outlinedTextFieldColors(
-                focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                focusedLabelColor = MaterialTheme.colorScheme.onBackground,
-                unfocusedLabelColor = MaterialTheme.colorScheme.onBackground
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onBackground
             )
         )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Campo: Correo
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Correo") },
+            label = { Text("Correo electrónico") },
+            enabled = googleEmail.isEmpty(), // Deshabilita si proviene de Google Sign-In
             modifier = Modifier.fillMaxWidth(),
             colors = TextFieldDefaults.outlinedTextFieldColors(
-                focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                focusedLabelColor = MaterialTheme.colorScheme.onBackground,
-                unfocusedLabelColor = MaterialTheme.colorScheme.onBackground
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onBackground,
+                disabledTextColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                disabledLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             ),
-            isError = !isEmailValid && email.isNotEmpty() // Muestra un error si el correo es inválido
+            isError = !isEmailValid && email.isNotEmpty()
         )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Campo: Contraseña
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -83,12 +121,13 @@ fun RegisterScreen(dbHelper: DatabaseHelper) {
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             colors = TextFieldDefaults.outlinedTextFieldColors(
-                focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                focusedLabelColor = MaterialTheme.colorScheme.onBackground,
-                unfocusedLabelColor = MaterialTheme.colorScheme.onBackground
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onBackground
             )
         )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Campo: Confirmar contraseña
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
@@ -96,40 +135,52 @@ fun RegisterScreen(dbHelper: DatabaseHelper) {
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             colors = TextFieldDefaults.outlinedTextFieldColors(
-                focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                focusedLabelColor = MaterialTheme.colorScheme.onBackground,
-                unfocusedLabelColor = MaterialTheme.colorScheme.onBackground
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onBackground
             ),
-            isError = !doPasswordsMatch && confirmPassword.isNotEmpty() // Muestra un error si las contraseñas no coinciden
+            isError = !doPasswordsMatch && confirmPassword.isNotEmpty()
         )
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
-
+        // Botón: Registrar
         Button(
             onClick = {
                 if (isEmailValid && doPasswordsMatch) {
                     val db = dbHelper.writableDatabase
-                    db.execSQL(
-                        "INSERT INTO ${DatabaseHelper.TABLE_USERS} (${DatabaseHelper.COLUMN_USER_USERNAME}, ${DatabaseHelper.COLUMN_USER_EMAIL}, ${DatabaseHelper.COLUMN_USER_PASSWORD}) VALUES (?, ?, ?)",
-                        arrayOf(username, email, password) // Incluye el username en los valores a insertar
-                    )
-                    Toast.makeText(context, "Registro exitoso.", Toast.LENGTH_SHORT).show()
-                    (context as ComponentActivity).finish()
+                    try {
+                        db.execSQL(
+                            "INSERT INTO ${DatabaseHelper.TABLE_USERS} (${DatabaseHelper.COLUMN_USER_USERNAME}, ${DatabaseHelper.COLUMN_USER_EMAIL}, ${DatabaseHelper.COLUMN_USER_PASSWORD}) VALUES (?, ?, ?)",
+                            arrayOf(username, email, password)
+                        )
+                        Toast.makeText(context, "Registro exitoso", Toast.LENGTH_SHORT).show()
+
+                        if (fromGoogleSignIn) {
+                            // Navegar a MainActivity si se registró con Google
+                            val mainIntent = Intent(context, MainActivity::class.java).apply {
+                                putExtra("USER_NAME", username)
+                                putExtra("USER_EMAIL", email)
+                            }
+                            context.startActivity(mainIntent)
+                            (context as ComponentActivity).finish()
+                        } else {
+                            // Volver a LoginActivity si se registró manualmente
+                            (context as ComponentActivity).finish()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Error al guardar en la base de datos", Toast.LENGTH_SHORT).show()
+                        e.printStackTrace()
+                    }
                 } else {
                     Toast.makeText(context, "Por favor, verifica tus datos.", Toast.LENGTH_SHORT).show()
                 }
             },
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary
+                containerColor = MaterialTheme.colorScheme.primary
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Registrar", color = Color.White)
         }
-
     }
 }
-
-
 
