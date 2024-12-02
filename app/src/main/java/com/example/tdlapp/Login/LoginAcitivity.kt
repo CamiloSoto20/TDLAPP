@@ -1,5 +1,6 @@
 package com.example.tdlapp.Login
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -67,16 +69,37 @@ class LoginActivity : ComponentActivity() {
             .build()
         googleSignInClient = GoogleSignIn.getClient(this, gso)
 
-        setContent {
-            AppTheme {
-                LoginScreen(dbHelper) {
-                    // Cerrar sesión antes de iniciar el proceso de Google Sign-In
-                    googleSignInClient.signOut().addOnCompleteListener {
-                        val signInIntent = googleSignInClient.signInIntent
-                        startActivityForResult(signInIntent, RC_SIGN_IN)
+        // Verificar si hay una sesión activa
+        val sharedPreferences = getSharedPreferences("user_session", Context.MODE_PRIVATE)
+        val userEmail = sharedPreferences.getString("USER_EMAIL", null)
+        val userName = sharedPreferences.getString("USER_NAME", null)
+        val userRole = sharedPreferences.getString("USER_ROLE", null) // Obtener el rol del usuario
+
+        if (userEmail != null && userName != null && userRole != null) {
+            // Si hay una sesión activa, ir a MainActivity
+            val mainIntent = Intent(this, MainActivity::class.java).apply {
+                putExtra("USER_NAME", userName)
+                putExtra("USER_EMAIL", userEmail)
+                putExtra("USER_ROLE", userRole) // Pasar el rol del usuario a MainActivity
+            }
+            startActivity(mainIntent)
+            finish()
+        } else {
+            // Si no hay sesión, mostrar pantalla de login
+            setContent {
+                AppTheme {
+                    LoginScreen(dbHelper, googleSignInClient) {
+                        handleGoogleSignIn()
                     }
                 }
             }
+        }
+    }
+
+    private fun handleGoogleSignIn() {
+        googleSignInClient.signOut().addOnCompleteListener {
+            val signInIntent = googleSignInClient.signInIntent
+            startActivityForResult(signInIntent, RC_SIGN_IN)
         }
     }
 
@@ -88,11 +111,45 @@ class LoginActivity : ComponentActivity() {
             try {
                 val account = task.getResult(Exception::class.java)
                 account?.let {
-                    val intent = Intent(this, RegisterActivity::class.java).apply {
-                        putExtra("GOOGLE_EMAIL", it.email)
-                        putExtra("FROM_GOOGLE_SIGN_IN", true)  // Indicar que proviene de Google Sign-In
+                    // Verificar si la cuenta está en la base de datos
+                    val db = dbHelper.readableDatabase
+                    val cursor = db.rawQuery(
+                        "SELECT * FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_USER_EMAIL}=?",
+                        arrayOf(it.email)
+                    )
+                    if (cursor != null && cursor.moveToFirst()) {
+                        // Si la cuenta ya está registrada, iniciar sesión
+                        val userId = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_ID))
+                        val userName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_USERNAME))
+                        val userRole = dbHelper.getUserRole(userId) // Obtener el rol del usuario
+                        cursor.close()
+
+                        // Guardar sesión en SharedPreferences
+                        val sharedPreferences = getSharedPreferences("user_session", Context.MODE_PRIVATE)
+                        with (sharedPreferences.edit()) {
+                            putString("USER_NAME", userName)
+                            putString("USER_EMAIL", it.email)
+                            putString("USER_ROLE", userRole) // Guardar el rol del usuario
+                            apply()
+                        }
+
+                        // Navegar a MainActivity
+                        val mainIntent = Intent(this, MainActivity::class.java).apply {
+                            putExtra("USER_NAME", userName)
+                            putExtra("USER_EMAIL", it.email)
+                            putExtra("USER_ROLE", userRole) // Pasar el rol del usuario a MainActivity
+                        }
+                        startActivity(mainIntent)
+                        finish()
+                    } else {
+                        cursor?.close()
+                        // Si no está registrada, ir a RegisterActivity
+                        val intent = Intent(this, RegisterActivity::class.java).apply {
+                            putExtra("GOOGLE_EMAIL", it.email)
+                            putExtra("FROM_GOOGLE_SIGN_IN", true)  // Indicar que proviene de Google Sign-In
+                        }
+                        startActivity(intent)
                     }
-                    startActivity(intent)
                 }
             } catch (e: Exception) {
                 Toast.makeText(this, "Error al iniciar sesión con Google", Toast.LENGTH_SHORT).show()
@@ -101,9 +158,11 @@ class LoginActivity : ComponentActivity() {
     }
 }
 
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(dbHelper: DatabaseHelper, onGoogleSignInClick: () -> Unit) {
+fun LoginScreen(dbHelper: DatabaseHelper, googleSignInClient: GoogleSignInClient, onGoogleSignInClick: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
@@ -174,19 +233,31 @@ fun LoginScreen(dbHelper: DatabaseHelper, onGoogleSignInClick: () -> Unit) {
                                 "SELECT * FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_USER_EMAIL}=? AND ${DatabaseHelper.COLUMN_USER_PASSWORD}=?",
                                 arrayOf(email, password)
                             )
-                            if (cursor != null && cursor.moveToFirst()) {
+                            if (cursor.moveToFirst()) {
+                                val userId = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_ID))
                                 val userName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_USERNAME))
                                 val userEmail = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_EMAIL))
+                                val userRole = dbHelper.getUserRole(userId) // Obtener el rol del usuario
                                 cursor.close()
+
+                                // Guardar sesión en SharedPreferences
+                                val sharedPreferences = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
+                                with (sharedPreferences.edit()) {
+                                    putString("USER_NAME", userName)
+                                    putString("USER_EMAIL", userEmail)
+                                    putString("USER_ROLE", userRole) // Guardar el rol del usuario
+                                    apply()
+                                }
 
                                 val mainIntent = Intent(context, MainActivity::class.java).apply {
                                     putExtra("USER_NAME", userName)
                                     putExtra("USER_EMAIL", userEmail)
+                                    putExtra("USER_ROLE", userRole) // Pasar el rol del usuario a MainActivity
                                 }
                                 context.startActivity(mainIntent)
                                 (context as ComponentActivity).finish()
                             } else {
-                                cursor?.close()
+                                cursor.close()
                                 Toast.makeText(context, "Credenciales inválidas", Toast.LENGTH_SHORT).show()
                             }
                         } catch (e: Exception) {
@@ -212,20 +283,22 @@ fun LoginScreen(dbHelper: DatabaseHelper, onGoogleSignInClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            Button(
-                onClick = onGoogleSignInClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
+            // Iniciar con logos de Google y blanco
+            Row(
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Iniciar con:",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(onClick = onGoogleSignInClick) {
                     Image(
-                        painter = painterResource(R.drawable.pngwing_com__2_), // Agrega tu logo aquí
+                        painter = painterResource(R.drawable.pngwing_com__2_), // Logo de Google
                         contentDescription = "Google",
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(30.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Iniciar Sesión con Google")
                 }
             }
         }

@@ -2,11 +2,13 @@ package com.example.tdlapp
 
 import android.app.Activity
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +23,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,8 +34,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.tdlapp.Login.LoginActivity
 import com.example.tdlapp.data.DatabaseHelper
@@ -51,16 +57,17 @@ class MainActivity : ComponentActivity() {
         // Recupera los datos del Intent
         val userName = intent.getStringExtra("USER_NAME") ?: "Nombre no disponible"
         val userEmail = intent.getStringExtra("USER_EMAIL") ?: "Correo no disponible"
+        val userRole = intent.getStringExtra("USER_ROLE") ?: "Rol no disponible" // Obtener el rol del usuario
 
         setContent {
             AppTheme {
-                MainScreen(userName, userEmail)
+                MainScreen(userName, userEmail, userRole)
             }
         }
     }
 
     @Composable
-    fun MainScreen(userName: String, userEmail: String) {
+    fun MainScreen(userName: String, userEmail: String, userRole: String) { // Añadir parámetro userRole
         val taskList = remember { mutableStateListOf<Task>() }
         val context = LocalContext.current
         val openDialog = remember { mutableStateOf(false) }
@@ -69,11 +76,20 @@ class MainActivity : ComponentActivity() {
             loadTasks(taskList)
         }
 
+        // Fondo de imagen borrosa
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
         ) {
+            Image(
+                painter = painterResource(id = R.drawable._f2c70854c2f350fd16c8261e3553f03), // Reemplaza con tu imagen
+                contentDescription = null,
+                modifier = Modifier
+                    .matchParentSize()
+                    .blur(10.dp),
+                contentScale = ContentScale.Crop
+            )
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -86,7 +102,12 @@ class MainActivity : ComponentActivity() {
                         style = MaterialTheme.typography.headlineLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
-                    IconButton(onClick = { openDialog.value = true }) {
+                    IconButton(
+                        onClick = { openDialog.value = true },
+                        colors = IconButtonDefaults.iconButtonColors(
+                            contentColor = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onBackground
+                        )
+                    ) {
                         Icon(Icons.Default.AccountCircle, contentDescription = "Cuenta")
                     }
                 }
@@ -97,11 +118,18 @@ class MainActivity : ComponentActivity() {
                     onDismiss = { openDialog.value = false },
                     userName = userName,
                     userEmail = userEmail,
+                    userRole = userRole, // Pasar el rol del usuario al diálogo
                     onLogout = {
                         openDialog.value = false
+                        // Limpiar preferencias compartidas
+                        val sharedPreferences = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
+                        with (sharedPreferences.edit()) {
+                            clear()
+                            apply()
+                        }
                         val loginIntent = Intent(context, LoginActivity::class.java)
                         context.startActivity(loginIntent)
-                        finish()
+                        (context as ComponentActivity).finish()
                     }
                 )
 
@@ -171,6 +199,7 @@ class MainActivity : ComponentActivity() {
         onDismiss: () -> Unit,
         userName: String,
         userEmail: String,
+        userRole: String, // Añadir parámetro userRole
         onLogout: () -> Unit
     ) {
         if (openDialog) {
@@ -181,6 +210,7 @@ class MainActivity : ComponentActivity() {
                     Column {
                         Text("Nombre: $userName")
                         Text("Correo: $userEmail")
+                        Text("Rol: $userRole") // Mostrar el rol del usuario
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = onLogout) {
                             Text("Cerrar sesión")
@@ -220,11 +250,15 @@ class MainActivity : ComponentActivity() {
         if (resultCode == Activity.RESULT_OK) {
             when (requestCode) {
                 REQUEST_ADD_TASK, REQUEST_EDIT_TASK -> {
+                    val userName = intent.getStringExtra("USER_NAME") ?: "Nombre no disponible"
+                    val userEmail = intent.getStringExtra("USER_EMAIL") ?: "Correo no disponible"
+                    val userRole = intent.getStringExtra("USER_ROLE") ?: "Rol no disponible"
+
                     val taskList = mutableStateListOf<Task>()
                     loadTasks(taskList)
                     setContent {
                         AppTheme {
-                            MainScreen(userName = "", userEmail = "") // Ajustar en función de tu lógica
+                            MainScreen(userName = userName, userEmail = userEmail, userRole = userRole) // Pasar userRole
                         }
                     }
                 }
@@ -237,8 +271,6 @@ class MainActivity : ComponentActivity() {
         private const val REQUEST_EDIT_TASK = 2
     }
 }
-
-
 
 
 

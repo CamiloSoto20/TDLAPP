@@ -1,5 +1,6 @@
 package com.example.tdlapp.Login
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -148,17 +149,46 @@ fun RegisterScreen(dbHelper: DatabaseHelper, googleEmail: String, fromGoogleSign
                 if (isEmailValid && doPasswordsMatch) {
                     val db = dbHelper.writableDatabase
                     try {
+                        // Datos estáticos para el administrador
+                        val adminUsername = "Camilo Alejandro"
+                        val adminEmail = "AdminKA@gmail.com"
+                        val adminPassword = "administrador"
+
+                        // Comprobar si se está registrando como admin
+                        val isRegisteringAsAdmin = username == adminUsername && email == adminEmail && password == adminPassword
+
                         db.execSQL(
                             "INSERT INTO ${DatabaseHelper.TABLE_USERS} (${DatabaseHelper.COLUMN_USER_USERNAME}, ${DatabaseHelper.COLUMN_USER_EMAIL}, ${DatabaseHelper.COLUMN_USER_PASSWORD}) VALUES (?, ?, ?)",
                             arrayOf(username, email, password)
                         )
+
+                        // Obtener el ID del usuario recién creado
+                        val cursor = db.rawQuery("SELECT last_insert_rowid()", null)
+                        val userId = if (cursor.moveToFirst()) cursor.getInt(0) else -1
+                        cursor.close()
+
+                        // Asignar el rol adecuado al nuevo usuario
+                        val roleId = if (isRegisteringAsAdmin) 1 else 2 // Asumiendo que el ID de rol 'Administrador' es 1 y 'Usuario' es 2
+                        dbHelper.assignRoleToUser(userId, roleId)
+
                         Toast.makeText(context, "Registro exitoso", Toast.LENGTH_SHORT).show()
+
+                        // Mantener la sesión activa
+                        val sharedPreferences = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
+                        val userRole = dbHelper.getUserRole(userId)
+                        with (sharedPreferences.edit()) {
+                            putString("USER_NAME", username)
+                            putString("USER_EMAIL", email)
+                            putString("USER_ROLE", userRole)
+                            apply()
+                        }
 
                         if (fromGoogleSignIn) {
                             // Navegar a MainActivity si se registró con Google
                             val mainIntent = Intent(context, MainActivity::class.java).apply {
                                 putExtra("USER_NAME", username)
                                 putExtra("USER_EMAIL", email)
+                                putExtra("USER_ROLE", userRole)
                             }
                             context.startActivity(mainIntent)
                             (context as ComponentActivity).finish()
@@ -183,4 +213,3 @@ fun RegisterScreen(dbHelper: DatabaseHelper, googleEmail: String, fromGoogleSign
         }
     }
 }
-

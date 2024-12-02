@@ -9,11 +9,11 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "TodoList.db"
-        private const val DATABASE_VERSION = 3 // Incrementamos la versión a 3
+        private const val DATABASE_VERSION = 4 // Incrementamos la versión a 4
 
         const val TABLE_USERS = "users"
         const val COLUMN_USER_ID = "id"
-        const val COLUMN_USER_USERNAME = "username" // Nuevo campo para el nombre de usuario
+        const val COLUMN_USER_USERNAME = "username"
         const val COLUMN_USER_EMAIL = "email"
         const val COLUMN_USER_PASSWORD = "password"
 
@@ -24,6 +24,14 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         const val COLUMN_TASK_DUE_DATE = "due_date"
         const val COLUMN_TASK_DUE_TIME = "due_time"
         const val COLUMN_TASK_COMPLETED = "completed"
+
+        // Nuevas tablas para roles
+        const val TABLE_ROLES = "roles"
+        const val COLUMN_ROLE_ID = "role_id"
+        const val COLUMN_ROLE_NAME = "role_name"
+
+        const val TABLE_USER_ROLES = "user_roles"
+        const val COLUMN_USER_ROLE_ID = "user_role_id"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -31,7 +39,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
         val createUsersTable = "CREATE TABLE $TABLE_USERS (" +
                 "$COLUMN_USER_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "$COLUMN_USER_USERNAME TEXT, " + // Añadimos la columna username
+                "$COLUMN_USER_USERNAME TEXT, " +
                 "$COLUMN_USER_EMAIL TEXT, " +
                 "$COLUMN_USER_PASSWORD TEXT)"
         db.execSQL(createUsersTable)
@@ -44,6 +52,24 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 "$COLUMN_TASK_DUE_TIME TEXT, " +
                 "$COLUMN_TASK_COMPLETED INTEGER)"
         db.execSQL(createTasksTable)
+
+        // Crear la tabla de roles
+        val createRolesTable = "CREATE TABLE $TABLE_ROLES (" +
+                "$COLUMN_ROLE_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "$COLUMN_ROLE_NAME TEXT)"
+        db.execSQL(createRolesTable)
+
+        // Crear la tabla de roles de usuarios
+        val createUserRolesTable = "CREATE TABLE $TABLE_USER_ROLES (" +
+                "$COLUMN_USER_ROLE_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "$COLUMN_USER_ID INTEGER, " +
+                "$COLUMN_ROLE_ID INTEGER, " +
+                "FOREIGN KEY($COLUMN_USER_ID) REFERENCES $TABLE_USERS($COLUMN_USER_ID), " +
+                "FOREIGN KEY($COLUMN_ROLE_ID) REFERENCES $TABLE_ROLES($COLUMN_ROLE_ID))"
+        db.execSQL(createUserRolesTable)
+
+        // Insertar roles predefinidos
+        db.execSQL("INSERT INTO $TABLE_ROLES ($COLUMN_ROLE_NAME) VALUES ('Administrador'), ('Usuario')")
 
         Log.d("DatabaseHelper", "Tables created successfully")
     }
@@ -61,6 +87,27 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             // Agregar columna username en users si actualizamos desde una versión anterior a la 3
             db.execSQL("ALTER TABLE $TABLE_USERS ADD COLUMN $COLUMN_USER_USERNAME TEXT")
             Log.d("DatabaseHelper", "Column $COLUMN_USER_USERNAME added to $TABLE_USERS")
+        }
+
+        if (oldVersion < 4) {
+            // Crear las nuevas tablas para roles y roles de usuarios si actualizamos desde una versión anterior a la 4
+            val createRolesTable = "CREATE TABLE $TABLE_ROLES (" +
+                    "$COLUMN_ROLE_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "$COLUMN_ROLE_NAME TEXT)"
+            db.execSQL(createRolesTable)
+
+            val createUserRolesTable = "CREATE TABLE $TABLE_USER_ROLES (" +
+                    "$COLUMN_USER_ROLE_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "$COLUMN_USER_ID INTEGER, " +
+                    "$COLUMN_ROLE_ID INTEGER, " +
+                    "FOREIGN KEY($COLUMN_USER_ID) REFERENCES $TABLE_USERS($COLUMN_USER_ID), " +
+                    "FOREIGN KEY($COLUMN_ROLE_ID) REFERENCES $TABLE_ROLES($COLUMN_ROLE_ID))"
+            db.execSQL(createUserRolesTable)
+
+            // Insertar roles predefinidos
+            db.execSQL("INSERT INTO $TABLE_ROLES ($COLUMN_ROLE_NAME) VALUES ('Administrador'), ('Usuario')")
+
+            Log.d("DatabaseHelper", "Tables $TABLE_ROLES and $TABLE_USER_ROLES created successfully")
         }
     }
 
@@ -81,9 +128,37 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             null
         }
     }
+
+    // Función para asignar un rol a un usuario
+    fun assignRoleToUser(userId: Int, roleId: Int) {
+        val db = writableDatabase
+        db.execSQL(
+            "INSERT INTO $TABLE_USER_ROLES ($COLUMN_USER_ID, $COLUMN_ROLE_ID) VALUES (?, ?)",
+            arrayOf(userId, roleId)
+        )
+        db.close()
+    }
+
+    // Función para obtener el rol de un usuario
+    fun getUserRole(userId: Int): String {
+        val db = readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT $COLUMN_ROLE_NAME FROM $TABLE_ROLES INNER JOIN $TABLE_USER_ROLES ON $TABLE_ROLES.$COLUMN_ROLE_ID = $TABLE_USER_ROLES.$COLUMN_ROLE_ID WHERE $TABLE_USER_ROLES.$COLUMN_USER_ID = ?",
+            arrayOf(userId.toString())
+        )
+        var role = ""
+        if (cursor != null && cursor.moveToFirst()) {
+            role = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ROLE_NAME))
+            cursor.close()
+        }
+        db.close()
+        return role
+    }
 }
 
 data class User(val id: Int, val username: String, val email: String)
+
+
 
 
 

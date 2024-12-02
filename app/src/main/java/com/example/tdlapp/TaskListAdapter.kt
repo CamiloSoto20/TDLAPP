@@ -26,14 +26,12 @@ fun TaskListScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
-                .background(MaterialTheme.colorScheme.background)
         ) {
             items(taskList) { task ->
                 TaskItem(task, onEditTask, onDeleteTask, onToggleCompleted)
@@ -62,7 +60,6 @@ fun TaskItem(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .clickable { onEditTask(task) }
-                .background(MaterialTheme.colorScheme.surface)
         ) {
             Text(
                 text = task.name,
@@ -116,7 +113,3 @@ fun TaskItem(
         }
     }
 }
-
-
-
-
