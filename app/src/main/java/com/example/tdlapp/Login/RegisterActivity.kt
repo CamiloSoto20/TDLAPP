@@ -97,7 +97,7 @@ fun RegisterScreen(dbHelper: DatabaseHelper, googleEmail: String, fromGoogleSign
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Campo: Correo
+        //Correo
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -114,7 +114,7 @@ fun RegisterScreen(dbHelper: DatabaseHelper, googleEmail: String, fromGoogleSign
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Campo: Contraseña
+        // Contraseña
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -128,7 +128,7 @@ fun RegisterScreen(dbHelper: DatabaseHelper, googleEmail: String, fromGoogleSign
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Campo: Confirmar contraseña
+        //Confirmar contraseña
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
@@ -151,8 +151,8 @@ fun RegisterScreen(dbHelper: DatabaseHelper, googleEmail: String, fromGoogleSign
                     try {
                         // Datos estáticos para el administrador
                         val adminUsername = "Camilo Alejandro"
-                        val adminEmail = "AdminKA@gmail.com"
-                        val adminPassword = "administrador"
+                        val adminEmail = "admin@gmail.com"
+                        val adminPassword = "hola"
 
                         // Comprobar si se está registrando como admin
                         val isRegisteringAsAdmin = username == adminUsername && email == adminEmail && password == adminPassword

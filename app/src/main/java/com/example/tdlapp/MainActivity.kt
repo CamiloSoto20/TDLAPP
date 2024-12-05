@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -133,29 +134,35 @@ class MainActivity : ComponentActivity() {
                     }
                 )
 
+                // Mostrar y gestionar tareas según el rol del usuario
                 TaskListScreen(
                     taskList = taskList,
+                    userRole = userRole, // Asegurarse de pasar userRole aquí
                     onEditTask = { task ->
-                        val editIntent = Intent(context, EditTaskActivity::class.java).apply {
-                            putExtra("TASK_ID", task.id)
-                            putExtra("TASK_NAME", task.name)
-                            putExtra("TASK_DESCRIPTION", task.description)
-                            putExtra("TASK_DUE_DATE", task.dueDate)
-                            putExtra("TASK_DUE_TIME", task.dueTime)
+                        if (userRole == "Administrador") {
+                            val editIntent = Intent(context, EditTaskActivity::class.java).apply {
+                                putExtra("TASK_ID", task.id)
+                                putExtra("TASK_NAME", task.name)
+                                putExtra("TASK_DESCRIPTION", task.description)
+                                putExtra("TASK_DUE_DATE", task.dueDate)
+                                putExtra("TASK_DUE_TIME", task.dueTime)
+                            }
+                            startActivityForResult(editIntent, REQUEST_EDIT_TASK)
+                        } else {
+                            Toast.makeText(context, "Solo los administradores pueden editar tareas", Toast.LENGTH_SHORT).show()
                         }
-                        startActivityForResult(editIntent, REQUEST_EDIT_TASK)
                     },
                     onDeleteTask = { task ->
-                        dbHelper.writableDatabase.delete(
-                            DatabaseHelper.TABLE_TASKS,
-                            "${DatabaseHelper.COLUMN_TASK_ID}=?",
-                            arrayOf(task.id.toString())
-                        )
-                        taskList.remove(task)
-                    },
-                    onAddTask = {
-                        val addIntent = Intent(context, AddTaskActivity::class.java)
-                        startActivityForResult(addIntent, REQUEST_ADD_TASK)
+                        if (userRole == "Administrador") {
+                            dbHelper.writableDatabase.delete(
+                                DatabaseHelper.TABLE_TASKS,
+                                "${DatabaseHelper.COLUMN_TASK_ID}=?",
+                                arrayOf(task.id.toString())
+                            )
+                            taskList.remove(task)
+                        } else {
+                            Toast.makeText(context, "Solo los administradores pueden eliminar tareas", Toast.LENGTH_SHORT).show()
+                        }
                     },
                     onToggleCompleted = { task, isCompleted ->
                         task.completed = isCompleted
@@ -178,16 +185,18 @@ class MainActivity : ComponentActivity() {
                     .padding(16.dp),
                 contentAlignment = Alignment.BottomCenter
             ) {
-                Button(
-                    onClick = {
-                        val addIntent = Intent(context, AddTaskActivity::class.java)
-                        startActivityForResult(addIntent, REQUEST_ADD_TASK)
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    )
-                ) {
-                    Text("Agregar Tarea", color = Color.White)
+                if (userRole == "Administrador") {
+                    Button(
+                        onClick = {
+                            val addIntent = Intent(context, AddTaskActivity::class.java)
+                            startActivityForResult(addIntent, REQUEST_ADD_TASK)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary
+                        )
+                    ) {
+                        Text("Agregar Tarea", color = Color.White)
+                    }
                 }
             }
         }
@@ -248,19 +257,15 @@ class MainActivity : ComponentActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == Activity.RESULT_OK) {
-            when (requestCode) {
-                REQUEST_ADD_TASK, REQUEST_EDIT_TASK -> {
-                    val userName = intent.getStringExtra("USER_NAME") ?: "Nombre no disponible"
-                    val userEmail = intent.getStringExtra("USER_EMAIL") ?: "Correo no disponible"
-                    val userRole = intent.getStringExtra("USER_ROLE") ?: "Rol no disponible"
+            val taskList = mutableStateListOf<Task>()
+            loadTasks(taskList)
+            setContent {
+                val userName = intent.getStringExtra("USER_NAME") ?: "Nombre no disponible"
+                val userEmail = intent.getStringExtra("USER_EMAIL") ?: "Correo no disponible"
+                val userRole = intent.getStringExtra("USER_ROLE") ?: "Rol no disponible"
 
-                    val taskList = mutableStateListOf<Task>()
-                    loadTasks(taskList)
-                    setContent {
-                        AppTheme {
-                            MainScreen(userName = userName, userEmail = userEmail, userRole = userRole) // Pasar userRole
-                        }
-                    }
+                AppTheme {
+                    MainScreen(userName = userName, userEmail = userEmail, userRole = userRole) // Pasar userRole
                 }
             }
         }
