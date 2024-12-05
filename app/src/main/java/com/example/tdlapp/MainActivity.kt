@@ -10,13 +10,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.AlertDialog
@@ -40,7 +43,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.tdlapp.Login.LoginActivity
 import com.example.tdlapp.data.DatabaseHelper
 import com.example.tdlapp.data.Task
@@ -97,17 +102,25 @@ class MainActivity : ComponentActivity() {
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text(
                         "TDLAPP",
-                        style = MaterialTheme.typography.headlineLarge,
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontSize = 40.sp, // Ajustar el tamaño del texto
+                            fontWeight = FontWeight.Bold
+                        ),
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     IconButton(
                         onClick = { openDialog.value = true },
                         colors = IconButtonDefaults.iconButtonColors(
                             contentColor = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onBackground
-                        )
+                        ),
+                        modifier = Modifier.size(50.dp) // Ajustar el tamaño del ícono
                     ) {
                         Icon(Icons.Default.AccountCircle, contentDescription = "Cuenta")
                     }
@@ -124,7 +137,7 @@ class MainActivity : ComponentActivity() {
                         openDialog.value = false
                         // Limpiar preferencias compartidas
                         val sharedPreferences = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
-                        with (sharedPreferences.edit()) {
+                        with(sharedPreferences.edit()) {
                             clear()
                             apply()
                         }
@@ -201,6 +214,9 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+
+
 
     @Composable
     fun AccountDialog(
