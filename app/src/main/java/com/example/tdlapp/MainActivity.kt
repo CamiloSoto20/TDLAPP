@@ -215,9 +215,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
-
-
     @Composable
     fun AccountDialog(
         openDialog: Boolean,
