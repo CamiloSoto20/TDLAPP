@@ -1,41 +1,20 @@
 package com.example.tdlapp
 
 import android.app.Activity
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -52,13 +31,19 @@ import com.example.tdlapp.data.Task
 import com.example.tdlapp.tareas.AddTaskActivity
 import com.example.tdlapp.tareas.EditTaskActivity
 import com.example.tdlapp.ui.theme.AppTheme
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 
 class MainActivity : ComponentActivity() {
+    private lateinit var database: DatabaseReference
     private lateinit var dbHelper: DatabaseHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         dbHelper = DatabaseHelper(this)
+
+        // Inicializar Firebase Database
+        database = FirebaseDatabase.getInstance().reference
 
         // Recupera los datos del Intent
         val userName = intent.getStringExtra("USER_NAME") ?: "Nombre no disponible"
@@ -73,7 +58,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun MainScreen(userName: String, userEmail: String, userRole: String) { // Añadir parámetro userRole
+    fun MainScreen(userName: String, userEmail: String, userRole: String) {
         val taskList = remember { mutableStateListOf<Task>() }
         val context = LocalContext.current
         val openDialog = remember { mutableStateOf(false) }
@@ -82,7 +67,6 @@ class MainActivity : ComponentActivity() {
             loadTasks(taskList)
         }
 
-        // Fondo de imagen borrosa
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -132,7 +116,7 @@ class MainActivity : ComponentActivity() {
                     onDismiss = { openDialog.value = false },
                     userName = userName,
                     userEmail = userEmail,
-                    userRole = userRole, // Pasar el rol del usuario al diálogo
+                    userRole = userRole,
                     onLogout = {
                         openDialog.value = false
                         // Limpiar preferencias compartidas
@@ -150,7 +134,7 @@ class MainActivity : ComponentActivity() {
                 // Mostrar y gestionar tareas según el rol del usuario
                 TaskListScreen(
                     taskList = taskList,
-                    userRole = userRole, // Asegurarse de pasar userRole aquí
+                    userRole = userRole,
                     onEditTask = { task ->
                         if (userRole == "Administrador") {
                             val editIntent = Intent(context, EditTaskActivity::class.java).apply {
@@ -167,11 +151,7 @@ class MainActivity : ComponentActivity() {
                     },
                     onDeleteTask = { task ->
                         if (userRole == "Administrador") {
-                            dbHelper.writableDatabase.delete(
-                                DatabaseHelper.TABLE_TASKS,
-                                "${DatabaseHelper.COLUMN_TASK_ID}=?",
-                                arrayOf(task.id.toString())
-                            )
+                            database.child("tasks").child(task.id).removeValue()
                             taskList.remove(task)
                         } else {
                             Toast.makeText(context, "Solo los administradores pueden eliminar tareas", Toast.LENGTH_SHORT).show()
@@ -179,14 +159,7 @@ class MainActivity : ComponentActivity() {
                     },
                     onToggleCompleted = { task, isCompleted ->
                         task.completed = isCompleted
-                        dbHelper.writableDatabase.update(
-                            DatabaseHelper.TABLE_TASKS,
-                            ContentValues().apply {
-                                put(DatabaseHelper.COLUMN_TASK_COMPLETED, if (isCompleted) 1 else 0)
-                            },
-                            "${DatabaseHelper.COLUMN_TASK_ID}=?",
-                            arrayOf(task.id.toString())
-                        )
+                        database.child("tasks").child(task.id).setValue(task)
                         loadTasks(taskList)
                     }
                 )
@@ -221,7 +194,7 @@ class MainActivity : ComponentActivity() {
         onDismiss: () -> Unit,
         userName: String,
         userEmail: String,
-        userRole: String, // Añadir parámetro userRole
+        userRole: String,
         onLogout: () -> Unit
     ) {
         if (openDialog) {
@@ -232,7 +205,7 @@ class MainActivity : ComponentActivity() {
                     Column {
                         Text("Nombre: $userName")
                         Text("Correo: $userEmail")
-                        Text("Rol: $userRole") // Mostrar el rol del usuario
+                        Text("Rol: $userRole")
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = onLogout) {
                             Text("Cerrar sesión")
@@ -248,23 +221,38 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun loadTasks(taskList: MutableList<Task>) {
-        taskList.clear()
-        val db = dbHelper.readableDatabase
-        val cursor = db.query(DatabaseHelper.TABLE_TASKS, null, null, null, null, null, null)
+    private fun saveTask(task: Task) {
+        // Obtener el último ID utilizado de Firebase
+        database.child("last_task_id").get().addOnSuccessListener { snapshot ->
+            var lastId = snapshot.getValue(Long::class.java) ?: 0
+            lastId++
+            val taskId = lastId.toString()
 
-        while (cursor.moveToNext()) {
-            val id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TASK_ID))
-            val name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TASK_NAME))
-            val description = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TASK_DESCRIPTION))
-            val dueDate = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TASK_DUE_DATE))
-            val dueTime = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TASK_DUE_TIME))
-            val completed = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TASK_COMPLETED)) > 0
-
-            val task = Task(id, name, description, dueDate, dueTime, completed)
-            taskList.add(task)
+            // Guardar la tarea en Firebase con el nuevo ID
+            val taskWithId = task.copy(id = taskId)
+            database.child("tasks").child(taskId).setValue(taskWithId)
+                .addOnSuccessListener {
+                    // Actualizar el último ID utilizado en Firebase
+                    database.child("last_task_id").setValue(lastId)
+                    Log.d("Firebase", "Tarea guardada exitosamente con ID: $taskId")
+                }
+                .addOnFailureListener {
+                    Log.e("Firebase", "Error al guardar la tarea.", it)
+                }
         }
-        cursor.close()
+    }
+
+    private fun loadTasks(taskList: MutableList<Task>) {
+        database.child("tasks").get().addOnSuccessListener { snapshot ->
+            taskList.clear()
+            snapshot.children.forEach {
+                val task = it.getValue(Task::class.java)
+                task?.let { taskList.add(task) }
+            }
+            Log.d("Firebase", "Tareas recuperadas: ${taskList.size}")
+        }.addOnFailureListener {
+            Log.e("Firebase", "Error al recuperar las tareas.", it)
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -278,7 +266,7 @@ class MainActivity : ComponentActivity() {
                 val userRole = intent.getStringExtra("USER_ROLE") ?: "Rol no disponible"
 
                 AppTheme {
-                    MainScreen(userName = userName, userEmail = userEmail, userRole = userRole) // Pasar userRole
+                    MainScreen(userName = userName, userEmail = userEmail, userRole = userRole)
                 }
             }
         }
@@ -289,6 +277,7 @@ class MainActivity : ComponentActivity() {
         private const val REQUEST_EDIT_TASK = 2
     }
 }
+
 
 
 

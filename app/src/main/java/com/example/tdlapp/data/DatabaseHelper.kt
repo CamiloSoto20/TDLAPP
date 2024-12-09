@@ -156,7 +156,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     }
 }
 
-data class User(val id: Int, val username: String, val email: String)
+
 
 
 

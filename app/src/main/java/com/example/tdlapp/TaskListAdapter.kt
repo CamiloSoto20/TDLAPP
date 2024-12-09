@@ -34,7 +34,7 @@ import com.example.tdlapp.data.Task
 @Composable
 fun TaskListScreen(
     taskList: List<Task>,
-    userRole: String, // Añadir parámetro userRole
+    userRole: String,
     onEditTask: (Task) -> Unit,
     onDeleteTask: (Task) -> Unit,
     onToggleCompleted: (Task, Boolean) -> Unit
@@ -55,35 +55,34 @@ fun TaskListScreen(
                     onEditTask = onEditTask,
                     onDeleteTask = onDeleteTask,
                     onToggleCompleted = onToggleCompleted,
-                    userRole = userRole // Pasar userRole a TaskItem
+                    userRole = userRole
                 )
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskItem(
     task: Task,
     onEditTask: (Task) -> Unit,
     onDeleteTask: (Task) -> Unit,
     onToggleCompleted: (Task, Boolean) -> Unit,
-    userRole: String // Añadir parámetro userRole
+    userRole: String
 ) {
     var showDialog by remember { mutableStateOf(false) }
-    var showDetailsDialog by remember { mutableStateOf(false) } // Estado para mostrar el diálogo de detalles
+    var showDetailsDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)) // Añadir borde con esquinas redondeadas
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp)) // Fondo con forma redondeada
+            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
             .padding(16.dp)
             .clickable {
                 if (userRole != "Administrador") {
-                    showDetailsDialog = true // Mostrar el diálogo de detalles
+                    showDetailsDialog = true
                 } else {
                     onEditTask(task)
                 }
@@ -151,7 +150,6 @@ fun TaskItem(
             }
         }
 
-        // Mostrar el diálogo con los detalles de la tarea
         if (showDetailsDialog) {
             AlertDialog(
                 onDismissRequest = { showDetailsDialog = false },

@@ -18,11 +18,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -48,19 +46,26 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.tdlapp.R
 import com.example.tdlapp.data.DatabaseHelper
+import com.example.tdlapp.data.Task
 import com.example.tdlapp.ui.theme.AppTheme
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import java.util.Calendar
 
 class EditTaskActivity : AppCompatActivity() {
     private lateinit var dbHelper: DatabaseHelper
-    private var taskId: Int? = null
+    private lateinit var database: DatabaseReference
+    private var taskId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         dbHelper = DatabaseHelper(this)
 
+        // Inicializar Firebase Database
+        database = FirebaseDatabase.getInstance().reference
+
         // Recuperar los datos de la tarea desde el Intent
-        taskId = intent.getIntExtra("TASK_ID", -1)
+        taskId = intent.getStringExtra("TASK_ID")
         val taskNameStr = intent.getStringExtra("TASK_NAME") ?: ""
         val taskDescriptionStr = intent.getStringExtra("TASK_DESCRIPTION") ?: ""
         val taskDueDateStr = intent.getStringExtra("TASK_DUE_DATE") ?: ""
@@ -70,6 +75,7 @@ class EditTaskActivity : AppCompatActivity() {
             AppTheme {
                 EditTaskScreen(
                     dbHelper = dbHelper,
+                    database = database,
                     taskId = taskId,
                     taskNameStr = taskNameStr,
                     taskDescriptionStr = taskDescriptionStr,
@@ -89,7 +95,8 @@ class EditTaskActivity : AppCompatActivity() {
 @Composable
 fun EditTaskScreen(
     dbHelper: DatabaseHelper,
-    taskId: Int?,
+    database: DatabaseReference,
+    taskId: String?,
     taskNameStr: String,
     taskDescriptionStr: String,
     taskDueDateStr: String,
@@ -231,12 +238,26 @@ fun EditTaskScreen(
             Button(
                 onClick = {
                     if (name.isNotEmpty() && description.isNotEmpty() && dueDate.isNotEmpty() && dueTime.isNotEmpty()) {
+                        // Actualizar en SQLite
                         val db = dbHelper.writableDatabase
                         db.execSQL(
                             "UPDATE ${DatabaseHelper.TABLE_TASKS} SET ${DatabaseHelper.COLUMN_TASK_NAME} = ?, ${DatabaseHelper.COLUMN_TASK_DESCRIPTION} = ?, ${DatabaseHelper.COLUMN_TASK_DUE_DATE} = ?, ${DatabaseHelper.COLUMN_TASK_DUE_TIME} = ? WHERE ${DatabaseHelper.COLUMN_TASK_ID} = ?",
                             arrayOf(name, description, dueDate, dueTime, taskId.toString())
                         )
                         db.close()
+
+                        // Actualizar en Firebase
+                        taskId?.let {
+                            val task = Task(it, name, description, dueDate, dueTime, false)
+                            database.child("tasks").child(it).setValue(task)
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "Tarea Actualizada en Firebase", Toast.LENGTH_SHORT).show()
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(context, "Error al actualizar en Firebase", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+
                         Toast.makeText(context, "Tarea Actualizada", Toast.LENGTH_SHORT).show()
                         val resultIntent = Intent().apply {
                             putExtra("TASK_ID", taskId)
@@ -260,6 +281,7 @@ fun EditTaskScreen(
         }
     }
 }
+
 
 
 

@@ -10,12 +10,31 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -27,19 +46,27 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.tdlapp.R
 import com.example.tdlapp.data.DatabaseHelper
+import com.example.tdlapp.data.Task
 import com.example.tdlapp.ui.theme.AppTheme
-import java.util.*
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
+import java.util.Calendar
 
 class AddTaskActivity : ComponentActivity() {
 
     private lateinit var dbHelper: DatabaseHelper
+    private lateinit var database: DatabaseReference
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         dbHelper = DatabaseHelper(this)
+
+        // Inicializar Firebase Database
+        database = FirebaseDatabase.getInstance().reference
+
         setContent {
             AppTheme {
-                AddTaskScreen(dbHelper) { resultIntent ->
+                AddTaskScreen(dbHelper, database) { resultIntent ->
                     setResult(RESULT_OK, resultIntent)
                     finish()
                 }
@@ -50,7 +77,11 @@ class AddTaskActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddTaskScreen(dbHelper: DatabaseHelper, onSave: (Intent) -> Unit) {
+fun AddTaskScreen(
+    dbHelper: DatabaseHelper,
+    database: DatabaseReference,
+    onSave: (Intent) -> Unit
+) {
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var dueDate by remember { mutableStateOf("") }
@@ -180,12 +211,33 @@ fun AddTaskScreen(dbHelper: DatabaseHelper, onSave: (Intent) -> Unit) {
             Button(
                 onClick = {
                     if (name.isNotEmpty() && description.isNotEmpty() && dueDate.isNotEmpty() && dueTime.isNotEmpty()) {
+                        // Guardar en SQLite
                         val db = dbHelper.writableDatabase
                         db.execSQL(
                             "INSERT INTO ${DatabaseHelper.TABLE_TASKS} (${DatabaseHelper.COLUMN_TASK_NAME}, ${DatabaseHelper.COLUMN_TASK_DESCRIPTION}, ${DatabaseHelper.COLUMN_TASK_DUE_DATE}, ${DatabaseHelper.COLUMN_TASK_DUE_TIME}, ${DatabaseHelper.COLUMN_TASK_COMPLETED}) VALUES (?, ?, ?, ?, ?)",
                             arrayOf(name, description, dueDate, dueTime, 0)
                         )
                         db.close()
+
+                        // Obtener el último ID utilizado de Firebase
+                        database.child("last_task_id").get().addOnSuccessListener { snapshot ->
+                            var lastId = snapshot.getValue(Long::class.java) ?: 0
+                            lastId++
+                            val taskId = lastId.toString()
+
+                            // Guardar la tarea en Firebase con el nuevo ID
+                            val task = Task(taskId, name, description, dueDate, dueTime, false)
+                            database.child("tasks").child(taskId).setValue(task)
+                                .addOnSuccessListener {
+                                    // Actualizar el último ID utilizado en Firebase
+                                    database.child("last_task_id").setValue(lastId)
+                                    Toast.makeText(context, "Tarea Agregada en Firebase", Toast.LENGTH_SHORT).show()
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(context, "Error al guardar en Firebase", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+
                         Toast.makeText(context, "Tarea Agregada", Toast.LENGTH_SHORT).show()
                         val resultIntent = Intent().apply {
                             putExtra("TASK_NAME", name)
@@ -208,9 +260,4 @@ fun AddTaskScreen(dbHelper: DatabaseHelper, onSave: (Intent) -> Unit) {
         }
     }
 }
-
-
-
-
-
 

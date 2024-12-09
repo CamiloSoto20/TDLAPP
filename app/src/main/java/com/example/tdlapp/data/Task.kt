@@ -1,11 +1,10 @@
 package com.example.tdlapp.data
 
 data class Task(
-    val id: Int,
-    val name: String,
-    val description: String,
-    val dueDate: String,
-    val dueTime: String, // Nuevo campo para la hora de entrega
-    var completed: Boolean
+    val id: String = "",
+    val name: String = "",
+    val description: String = "",
+    val dueDate: String = "",
+    val dueTime: String = "",
+    var completed: Boolean = false
 )
-
