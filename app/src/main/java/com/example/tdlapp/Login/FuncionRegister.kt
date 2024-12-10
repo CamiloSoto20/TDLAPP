@@ -127,12 +127,11 @@ fun RegisterScreen(dbHelper: DatabaseHelper, googleEmail: String, fromGoogleSign
                     val db = dbHelper.writableDatabase
                     try {
                         // Datos estáticos para el administrador
-                        val adminUsername = "Camilo Alejandro"
                         val adminEmail = "admin@gmail.com"
-                        val adminPassword = "hola"
+
 
                         // Comprobar si se está registrando como admin
-                        val isRegisteringAsAdmin = username == adminUsername && email == adminEmail && password == adminPassword
+                        val isRegisteringAsAdmin = email == adminEmail
 
                         db.execSQL(
                             "INSERT INTO ${DatabaseHelper.TABLE_USERS} (${DatabaseHelper.COLUMN_USER_USERNAME}, ${DatabaseHelper.COLUMN_USER_EMAIL}, ${DatabaseHelper.COLUMN_USER_PASSWORD}) VALUES (?, ?, ?)",

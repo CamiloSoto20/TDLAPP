@@ -38,13 +38,7 @@ class LoginActivity : ComponentActivity() {
 
         if (userEmail != null && userName != null && userRole != null) {
             // Si hay una sesión activa, ir a MainActivity
-            val mainIntent = Intent(this, MainActivity::class.java).apply {
-                putExtra("USER_NAME", userName)
-                putExtra("USER_EMAIL", userEmail)
-                putExtra("USER_ROLE", userRole) // Pasar el rol del usuario a MainActivity
-            }
-            startActivity(mainIntent)
-            finish()
+            navigateToMainActivity(userName, userEmail, userRole)
         } else {
             // Si no hay sesión, mostrar pantalla de login
             setContent {
@@ -72,52 +66,64 @@ class LoginActivity : ComponentActivity() {
             try {
                 val account = task.getResult(Exception::class.java)
                 account?.let {
-                    // Verificar si la cuenta está en la base de datos
-                    val db = dbHelper.readableDatabase
-                    val cursor = db.rawQuery(
-                        "SELECT * FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_USER_EMAIL}=?",
-                        arrayOf(it.email)
-                    )
-                    if (cursor != null && cursor.moveToFirst()) {
-                        // Si la cuenta ya está registrada, iniciar sesión
-                        val userId = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_ID))
-                        val userName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_USERNAME))
-                        val userRole = dbHelper.getUserRole(userId) // Obtener el rol del usuario
-                        cursor.close()
-
-                        // Guardar sesión en SharedPreferences
-                        val sharedPreferences = getSharedPreferences("user_session", Context.MODE_PRIVATE)
-                        with (sharedPreferences.edit()) {
-                            putString("USER_NAME", userName)
-                            putString("USER_EMAIL", it.email)
-                            putString("USER_ROLE", userRole) // Guardar el rol del usuario
-                            apply()
-                        }
-
-                        // Navegar a MainActivity
-                        val mainIntent = Intent(this, MainActivity::class.java).apply {
-                            putExtra("USER_NAME", userName)
-                            putExtra("USER_EMAIL", it.email)
-                            putExtra("USER_ROLE", userRole) // Pasar el rol del usuario a MainActivity
-                        }
-                        startActivity(mainIntent)
-                        finish()
-                    } else {
-                        cursor?.close()
-                        // Si no está registrada, ir a RegisterActivity
-                        val intent = Intent(this, RegisterActivity::class.java).apply {
-                            putExtra("GOOGLE_EMAIL", it.email)
-                            putExtra("FROM_GOOGLE_SIGN_IN", true)  // Indicar que proviene de Google Sign-In
-                        }
-                        startActivity(intent)
-                    }
+                    handleSignInResult(it)
                 }
             } catch (e: Exception) {
                 Toast.makeText(this, "Error al iniciar sesión con Google", Toast.LENGTH_SHORT).show()
             }
         }
     }
+
+    private fun handleSignInResult(account: GoogleSignInAccount) {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT * FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_USER_EMAIL}=?",
+            arrayOf(account.email)
+        )
+        cursor.use {
+            if (it != null && it.moveToFirst()) {
+                // Si la cuenta ya está registrada, iniciar sesión
+                val userId = it.getInt(it.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_ID))
+                val userName = it.getString(it.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_USERNAME))
+                val userRole = dbHelper.getUserRole(userId) // Obtener el rol del usuario
+
+                // Guardar sesión en SharedPreferences
+                saveUserSession(userName, account.email!!, userRole)
+
+                // Navegar a MainActivity
+                navigateToMainActivity(userName, account.email!!, userRole)
+            } else {
+                // Si no está registrada, ir a RegisterActivity
+                val intent = Intent(this, RegisterActivity::class.java).apply {
+                    putExtra("GOOGLE_EMAIL", account.email)
+                    putExtra("FROM_GOOGLE_SIGN_IN", true)  // Indicar que proviene de Google Sign-In
+                }
+                startActivity(intent)
+            }
+        }
+    }
+
+    private fun saveUserSession(userName: String, userEmail: String, userRole: String) {
+        val sharedPreferences = getSharedPreferences("user_session", Context.MODE_PRIVATE)
+        with(sharedPreferences.edit()) {
+            putString("USER_NAME", userName)
+            putString("USER_EMAIL", userEmail)
+            putString("USER_ROLE", userRole) // Guardar el rol del usuario
+            apply()
+        }
+    }
+
+    private fun navigateToMainActivity(userName: String, userEmail: String, userRole: String) {
+        val mainIntent = Intent(this, MainActivity::class.java).apply {
+            putExtra("USER_NAME", userName)
+            putExtra("USER_EMAIL", userEmail)
+            putExtra("USER_ROLE", userRole) // Pasar el rol del usuario a MainActivity
+        }
+        startActivity(mainIntent)
+        finish()
+    }
 }
+
 
 
 

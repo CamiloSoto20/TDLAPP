@@ -17,9 +17,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -34,8 +38,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -73,7 +79,8 @@ fun LoginScreen(dbHelper: DatabaseHelper, googleSignInClient: GoogleSignInClient
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
-                .blur(10.dp)
+                .blur(10.dp),
+            contentScale = ContentScale.Crop
         )
 
         Column(
@@ -94,6 +101,9 @@ fun LoginScreen(dbHelper: DatabaseHelper, googleSignInClient: GoogleSignInClient
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Correo electrónico") },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.Email, contentDescription = "Email")
+                },
                 modifier = Modifier.fillMaxWidth(),
                 isError = !isEmailValid && email.isNotEmpty(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -115,29 +125,19 @@ fun LoginScreen(dbHelper: DatabaseHelper, googleSignInClient: GoogleSignInClient
                 onClick = {
                     if (isEmailValid) {
                         val db = dbHelper.readableDatabase
-                        try {
-                            val cursor = db.rawQuery(
-                                "SELECT * FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_USER_EMAIL}=? AND ${DatabaseHelper.COLUMN_USER_PASSWORD}=?",
-                                arrayOf(email, password)
-                            )
-                            if (cursor.moveToFirst()) {
-                                val userId = cursor.getInt(cursor.getColumnIndexOrThrow(
-                                    DatabaseHelper.COLUMN_USER_ID))
-                                val userName = cursor.getString(cursor.getColumnIndexOrThrow(
-                                    DatabaseHelper.COLUMN_USER_USERNAME))
-                                val userEmail = cursor.getString(cursor.getColumnIndexOrThrow(
-                                    DatabaseHelper.COLUMN_USER_EMAIL))
+                        val cursor = db.rawQuery(
+                            "SELECT * FROM ${DatabaseHelper.TABLE_USERS} WHERE ${DatabaseHelper.COLUMN_USER_EMAIL}=? AND ${DatabaseHelper.COLUMN_USER_PASSWORD}=?",
+                            arrayOf(email, password)
+                        )
+                        cursor.use {
+                            if (it.moveToFirst()) {
+                                val userId = it.getInt(it.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_ID))
+                                val userName = it.getString(it.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_USERNAME))
+                                val userEmail = it.getString(it.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_EMAIL))
                                 val userRole = dbHelper.getUserRole(userId) // Obtener el rol del usuario
-                                cursor.close()
 
                                 // Guardar sesión en SharedPreferences
-                                val sharedPreferences = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
-                                with (sharedPreferences.edit()) {
-                                    putString("USER_NAME", userName)
-                                    putString("USER_EMAIL", userEmail)
-                                    putString("USER_ROLE", userRole) // Guardar el rol del usuario
-                                    apply()
-                                }
+                                saveUserSession(context, userName, userEmail, userRole)
 
                                 val mainIntent = Intent(context, MainActivity::class.java).apply {
                                     putExtra("USER_NAME", userName)
@@ -147,12 +147,8 @@ fun LoginScreen(dbHelper: DatabaseHelper, googleSignInClient: GoogleSignInClient
                                 context.startActivity(mainIntent)
                                 (context as ComponentActivity).finish()
                             } else {
-                                cursor.close()
                                 Toast.makeText(context, "Credenciales inválidas", Toast.LENGTH_SHORT).show()
                             }
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Error al consultar la base de datos", Toast.LENGTH_SHORT).show()
-                            e.printStackTrace()
                         }
                     } else {
                         Toast.makeText(context, "Correo no válido", Toast.LENGTH_SHORT).show()
@@ -183,7 +179,12 @@ fun LoginScreen(dbHelper: DatabaseHelper, googleSignInClient: GoogleSignInClient
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                IconButton(onClick = onGoogleSignInClick) {
+                IconButton(
+                    onClick = onGoogleSignInClick,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color.White)
+                ) {
                     Image(
                         painter = painterResource(R.drawable.pngwing_com__2_), // Logo de Google
                         contentDescription = "Google",
@@ -194,4 +195,15 @@ fun LoginScreen(dbHelper: DatabaseHelper, googleSignInClient: GoogleSignInClient
         }
     }
 }
+
+private fun saveUserSession(context: Context, userName: String, userEmail: String, userRole: String) {
+    val sharedPreferences = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
+    with(sharedPreferences.edit()) {
+        putString("USER_NAME", userName)
+        putString("USER_EMAIL", userEmail)
+        putString("USER_ROLE", userRole) // Guardar el rol del usuario
+        apply()
+    }
+}
+
 
